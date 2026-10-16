@@ -49,9 +49,9 @@
 				>
 			{/if}
 		</div>
-		<label class="done">
+		<label class="done" class:on={done} title={done ? 'Marked done: click to undo' : 'Mark this question as done'}>
 			<input type="checkbox" checked={done} onchange={(e) => progress.set(assessmentId, question.id, e.currentTarget.checked)} />
-			done
+			{done ? '✓ done' : 'done'}
 		</label>
 	</div>
 
@@ -95,12 +95,18 @@
 		transition: opacity 0.2s;
 		scroll-margin-top: 120px;
 	}
+	/* Done stays visibly done even under the cursor: green edge + label, softer content. */
 	.q.is-done {
-		opacity: 0.62;
+		border-left: 4px solid var(--ok);
+		background: color-mix(in srgb, var(--ok) 5%, var(--surface));
 	}
-	.q.is-done:hover,
-	.q.is-done:focus-within {
-		opacity: 1;
+	.q.is-done .prompt,
+	.q.is-done h3 {
+		opacity: 0.7;
+	}
+	.done.on {
+		color: var(--ok);
+		font-weight: 600;
 	}
 	.top {
 		display: grid;
