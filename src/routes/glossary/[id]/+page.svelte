@@ -56,7 +56,7 @@
 				{#each uses as u (u.assessment.id + u.question.id)}
 					<li>
 						<a href={assessmentHref(u.assessment.id, `q-${u.question.id}`)}>{plainText(u.question.title, (id) => getTerm(id)?.term ?? id)}</a>
-						<span>#{u.assessment.number} {u.assessment.title}</span>
+						<span>{u.assessment.title}</span>
 					</li>
 				{/each}
 			</ul>

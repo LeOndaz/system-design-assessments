@@ -15,6 +15,8 @@
 	import TraceView from '$lib/charts/TraceView.svelte';
 	import LabConsole from '$lib/labs/LabConsole.svelte';
 	import MockScreenView from '$lib/mock/MockScreen.svelte';
+	import Terminal from '$lib/terminal/Terminal.svelte';
+	import DiffView from '$lib/review/DiffView.svelte';
 	import Self from './Blocks.svelte';
 
 	let { blocks }: { blocks: Block[] } = $props();
@@ -57,6 +59,10 @@
 		<LabConsole lab={b.lab} />
 	{:else if b.type === 'mock'}
 		<MockScreenView mock={b.mock} />
+	{:else if b.type === 'terminal'}
+		<Terminal scenario={b.terminal} />
+	{:else if b.type === 'diff'}
+		<DiffView diff={b.diff} />
 	{:else if b.type === 'columns'}
 		<div class="columns">
 			{#each b.columns as col, j (j)}

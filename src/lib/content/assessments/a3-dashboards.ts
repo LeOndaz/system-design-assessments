@@ -94,7 +94,7 @@ const g1: Question = {
 				},
 				{
 					title: 'A slow query or lock contention in Postgres.',
-					body: 'Would show *active* sessions rising and CPU or [[lock-wait|lock waits]] climbing. Active stays flat at ~8–14 and CPU is flat. Ruled down.',
+					body: 'Would show *active* sessions rising and CPU or [[lock-wait|lock waits]] climbing. Active only edges up from ~8 to ~14 while idle-in-transaction climbs to ~46, and CPU is flat. Ruled down.',
 					confirm: '`pg_stat_activity` grouped by `wait_event_type`.'
 				},
 				{
@@ -111,7 +111,7 @@ const g1: Question = {
 		},
 		{
 			type: 'p',
-			text: '**Mitigate now:** [[rollback]] v3.18. **Fix properly:** call fraud-check before `BEGIN` (no network I/O inside transactions), set `idle_in_transaction_session_timeout`, and alert on pool wait time, which moved a full minute before user latency.'
+			text: '**Mitigate now:** [[rollback]] v3.18. **Fix properly:** call fraud-check before `BEGIN` (no network I/O inside transactions), set `idle_in_transaction_session_timeout`, and alert on pool wait time, which started climbing at 14:11 together with p99 and before the median user (p50) felt anything.'
 		}
 	]
 };
@@ -273,7 +273,7 @@ const g4: Question = {
 					ts('Produce rate by partition', g4x, [0, 1, 2, 3, 4, 5].map((p) => S(`p${p}`, shape(60, { base: 780, seed: 50 + p, noise: 0.06 }, p === 3 ? step(10, 3800) : (_, v) => v), (p % 6) as SeriesColor)), { unit: ' msg/s', span: 3 }),
 					ts('Consume rate by partition', g4x, [0, 1, 2, 3, 4, 5].map((p) => S(`p${p}`, shape(60, { base: 780, seed: 60 + p, noise: 0.06 }, p === 3 ? step(10, 820) : bump(30, 33, -780), bump(30, 33, p === 3 ? -820 : 0)), (p % 6) as SeriesColor)), { unit: ' msg/s', span: 3 }),
 					bars('Rebalances', g4x, [S('rebalances', flat(60, 0).map((_, i) => (i === 30 || i === 31 ? 1 : 0)), 2)], { span: 2 }),
-					{ kind: 'table', title: 'Top message keys, last 15 min', span: 4, head: ['key (customer_id)', 'partition', 'share'], rows: [['cust_88120 (bulk importer)', 'p3', '71.4%'], ['cust_10233', 'p1', '1.9%'], ['cust_55017', 'p5', '1.6%'], ['cust_70402', 'p3', '1.1%']], numeric: [2], highlight: [0] }
+					{ kind: 'table', title: 'Top message keys, last 15 min', span: 4, head: ['key (customer_id)', 'partition', 'share'], rows: [['cust_88120 (bulk importer)', 'p3', '39.2%'], ['cust_10233', 'p1', '1.9%'], ['cust_55017', 'p5', '1.6%'], ['cust_70402', 'p3', '1.1%']], numeric: [2], highlight: [0] }
 				]
 			}
 		}
@@ -287,8 +287,8 @@ const g4: Question = {
 			type: 'ranked',
 			items: [
 				{
-					title: 'One customer’s bulk import sends 71% of all traffic with a single [[partition-key]], so it all lands on p3 and is processed by exactly one consumer.',
-					body: 'Kafka keeps per-key order by sending a key to one partition, and a partition is read by at most one consumer in the group. The table shows `cust_88120` at 71% of messages, all on p3. That’s a [[hot-partition]]: the topic as a whole has capacity, one lane doesn’t. Every other customer whose key hashes to p3 (e.g. `cust_70402`) waits behind the import, which is why “some customers” ship late.',
+					title: 'One customer’s bulk import sends ~40% of all traffic (~3,000 msg/s) with a single [[partition-key]], so it all lands on p3 and is processed by exactly one consumer.',
+					body: 'Kafka keeps per-key order by sending a key to one partition, and a partition is read by at most one consumer in the group. The table shows `cust_88120` at ~39% of messages, all on p3 (about four-fifths of p3’s traffic). That’s a [[hot-partition]]: the topic as a whole has capacity, one lane doesn’t. Every other customer whose key hashes to p3 (e.g. `cust_70402`) waits behind the import, which is why “some customers” ship late.',
 					confirm: 'Per-partition lag + top keys (shown). Check fulfilment logs for `cust_70402` orders: they’ll be delayed by the same amount as p3’s lag.'
 				}
 			]
@@ -388,7 +388,7 @@ const k2: Question = {
 			logs: {
 				style: 'kibana',
 				title: 'Discover · logs-api-*',
-				query: 'service:cart-api AND http.status >= 400',
+				query: 'service:cart-api AND http.status >= 400 OR level:WARN',
 				total: '3,912 hits',
 				histogram: {
 					x: k2x,
@@ -428,7 +428,7 @@ const k2: Question = {
 			items: [
 				{
 					title: 'The backend deploy made validation strict, and old app versions (4.x, ~17% of iOS users) send `quantity` as a string.',
-					body: 'The old lenient validator [[type-coercion|coerced]] `"2"` to `2`; the strict one rejects it. “No mobile release today” is true and irrelevant: the *server* changed its contract. “iPhone only” is a correlation: the 4.x builds still in use are iOS (Android force-updated earlier, or 4.x Android serialized correctly). It’s a backward-compatibility break.',
+					body: 'The old lenient validator [[type-coercion|coerced]] `"2"` to `2`; the strict one rejects it. “No mobile release today” is true and irrelevant: the *server* changed its contract. “iPhone only” is a correlation: presumably few Android users are still on 4.x (e.g. Android force-updated earlier, or 4.x Android serialized correctly), which the version × platform grouping below would confirm. It’s a backward-compatibility break.',
 					confirm: 'Replay a captured 4.9.2 request body against v2.13 and v2.14. Group 400s by `client.app_version × client.platform`.'
 				}
 			]
@@ -437,7 +437,7 @@ const k2: Question = {
 			type: 'callout',
 			tone: 'warn',
 			title: 'Red herrings',
-			text: 'The small histogram bump at 10:20 is `reports-worker`’s slow query: a different service that matches `status >= 400` only through a loose query. And “iPhone” is the reporter’s framing; the real dimension is app version.'
+			text: 'The small histogram bump at 10:20 is `reports-worker`’s slow query: a different service that lands in the hits only because the query is loose: `AND` binds tighter than `OR`, so `OR level:WARN` pulls in every service’s warnings (it never shows in the 400s-by-version breakdown). And “iPhone” is the reporter’s framing; the real dimension is app version.'
 		},
 		{
 			type: 'p',
@@ -529,11 +529,11 @@ const k4Pods = ['pay-gw-a (up 26h)', 'pay-gw-b (up 26h)', 'pay-gw-c (up 1h)', 'p
 const k4: Question = {
 	id: 'k4-cert-pods',
 	group: 'Kibana · log investigations',
-	title: '40% of bank calls fail, and the cert “isn’t expired”',
+	title: '20% of bank calls fail, and the cert “isn’t expired”',
 	tag: 'tricky',
 	minutes: 10,
 	prompt: [
-		{ type: 'p', text: 'Since 09:00, ~40% of outbound calls from `pay-gw` to the bank’s [[mtls|mTLS]] API fail. Security confirms the client certificate was rotated at 07:30 and the new one is valid until next year. The Kubernetes secret holds the new cert.' },
+		{ type: 'p', text: 'Since 09:00, ~20% of outbound calls from `pay-gw` to the bank’s [[mtls|mTLS]] API fail. Security confirms the client certificate was rotated at 07:30 and the new one is valid until next year. The Kubernetes secret holds the new cert.' },
 		{
 			type: 'dashboard',
 			dashboard: {
@@ -563,7 +563,7 @@ const k4: Question = {
 	answer: [
 		{
 			type: 'p',
-			text: 'Errors start at 09:00 sharp and come only from pods **a** and **b**, the two up for 26 h (each ~50% of its calls). Pods c, d, e (started after the 07:30 rotation) have zero errors. The failing log lines present serial `4F:A1…` with `not_after 09:00:00Z today`; the successful ones present `7C:22…` valid until 2027. 2 of 5 pods = 40%.'
+			text: 'Errors start at 09:00 sharp and come only from pods **a** and **b**, the two up for 26 h (each ~50% of its calls). Pods c, d, e (started after the 07:30 rotation) have zero errors. The failing log lines present serial `4F:A1…` with `not_after 09:00:00Z today`; the successful ones present `7C:22…` valid until 2027. 2 of 5 pods each failing ~half their calls = 3,295 of 16,485 ≈ 20% overall.'
 		},
 		{
 			type: 'ranked',
@@ -635,7 +635,7 @@ const c1: Question = {
 				},
 				{
 					title: 'Memory pressure / I/O saturation.',
-					body: 'FreeableMemory is flat at 1.4 GB, and ReadIOPS rose at 09:00 with the job but didn’t change at 10:55. Read latency rises because queries wait for CPU, not disk. Ruled down.'
+					body: 'FreeableMemory is flat at 1.4 GB, and ReadIOPS rose at 09:00 with the job but didn’t change at 11:55. Read latency rises because queries wait for CPU, not disk. Ruled down.'
 				}
 			]
 		},
@@ -670,7 +670,7 @@ const c2: Question = {
 					ts('api-handler Throttles', c2x, [S('Sum', c2ApiWant.map((w, i) => Math.round(Math.max(0, w - c2Api[i]) * 22)), 2)], { span: 3 }),
 					ts('api-handler Duration p99', c2x, [S('p99', shape(60, { base: 180, seed: 122, noise: 0.08 }), 0)], { unit: ' ms', span: 2, yMin: 0 }),
 					ts('api-handler Init Duration (cold starts)', c2x, [S('p99', shape(60, { base: 380, seed: 123, noise: 0.1 }, bump(30, 32, 260)), 3)], { unit: ' ms', span: 2, yMin: 0 }),
-					ts('API Gateway 5XXError', c2x, [S('Sum', shape(60, { base: 2, seed: 124, noise: 0.4 }, step(31, 1700)), 2)], { span: 2 })
+					ts('API Gateway 5XXError', c2x, [S('Sum', shape(60, { base: 2, seed: 124, noise: 0.4 }, step(33, 1700)), 2)], { span: 2 })
 				]
 			}
 		}
@@ -678,7 +678,7 @@ const c2: Question = {
 	answer: [
 		{
 			type: 'p',
-			text: 'At 09:00 `batch-import` jumps from 0 to ~760 concurrent executions. Stacked concurrency hits the 1,000 account limit; `api-handler` is squeezed from ~330 to ~230, and its Throttles and the API Gateway 5XX both rise at 09:01.'
+			text: 'At 09:00 `batch-import` ramps from 0 to ~760 concurrent executions within three minutes. By 09:03 stacked concurrency hits the 1,000 account limit; `api-handler` is squeezed from ~330 to ~230, and its Throttles and the API Gateway 5XX both rise at 09:03.'
 		},
 		{
 			type: 'ranked',
@@ -686,7 +686,7 @@ const c2: Question = {
 				{
 					title: 'The batch import consumed the account-wide [[lambda-concurrency|concurrency pool]], so the API function is throttled.',
 					body: 'The 1,000 limit is shared by every function in the account and region. An S3-triggered import fanned out to 760 parallel executions, a classic [[noisy-neighbor]]. `api-handler` didn’t change: its p99 duration is flat at ~180 ms. It just can’t get execution slots. ~100 missing slots out of ~330 ≈ 30% of requests throttled at peak, consistent with “~20% of actions”.',
-					confirm: 'Throttles on `api-handler` start the same minute `batch-import` concurrency rises (shown). Check `UnreservedConcurrentExecutions`.'
+					confirm: 'Throttles on `api-handler` start the same minute `batch-import` pushes stacked concurrency to the limit (shown). Check `UnreservedConcurrentExecutions`.'
 				}
 			]
 		},
@@ -897,7 +897,7 @@ const c6: Question = {
 				title: 'NAT gateway · nat-0a12',
 				range: '14:00 – 14:59',
 				panels: [
-					ts('ActiveConnectionCount', c6x, [S('Max', cap(shape(60, { base: 9000, seed: 160, noise: 0.03 }, ramp(10, 25, 9000, 55000)), 55100), 0)], { span: 3, markers: c6Flag, thresholds: [{ value: 55000, label: '~55k per destination', tone: 'crit' }] }),
+					ts('ActiveConnectionCount', c6x, [S('Max', cap(shape(60, { base: 9000, seed: 160, noise: 0.03 }, ramp(10, 24, 9000, 55000)), 55100), 0)], { span: 3, markers: c6Flag, thresholds: [{ value: 55000, label: '~55k per destination', tone: 'crit' }] }),
 					ts('ErrorPortAllocation', c6x, [S('Sum', shape(60, { base: 0, seed: 161, noise: 0.2 }, step(24, 2400)), 2)], { span: 3 }),
 					ts('ConnectionAttemptCount vs ConnectionEstablishedCount', c6x, [S('attempts', shape(60, { base: 2200, seed: 162, noise: 0.05 }, step(10, 9800)), 1), S('established', shape(60, { base: 2200, seed: 163, noise: 0.05 }, step(10, 9800), step(24, 7300)), 0)], { span: 3 }),
 					ts('BytesOutToDestination', c6x, [S('Sum', shape(60, { base: 210, seed: 164, noise: 0.05 }, step(10, 260)), 3)], { unit: ' MB', span: 3, yMin: 0 }),
@@ -909,14 +909,14 @@ const c6: Question = {
 	answer: [
 		{
 			type: 'p',
-			text: 'The geo-enrichment flag goes to 100% at 14:10. Connection attempts jump ~4.5× (2.2 k → 9.8 k/min) while bytes out rise only ~25%: lots of tiny new connections. Active connections climb to ~55 k by 14:24, exactly when *ErrorPortAllocation* starts (~2,400/min) and established falls below attempts. 92% of connections go to one IP:[[ephemeral-ports|port]].'
+			text: 'The geo-enrichment flag goes to 100% at 14:10. Connection attempts jump ~4.5× (2.2 k → 9.8 k/min) while bytes out rise only ~25%: lots of tiny new connections. Active connections climb to ~55 k by 14:24, exactly when *ErrorPortAllocation* starts (~2,400/min) and established falls below attempts. 92% of connections go to one destination IP:port, each holding one of the NAT’s [[ephemeral-ports|source ports]] for it.'
 		},
 		{
 			type: 'ranked',
 			items: [
 				{
 					title: '[[nat-port-exhaustion|NAT port exhaustion]] to a single destination: the new feature opens a fresh TCP connection per lookup, with no keep-alive.',
-					body: 'A NAT gateway can hold ~55,000 simultaneous connections to one destination IP+port. Each new connection takes a port, and closed connections linger in [[tcp|TIME_WAIT]]. At 9.8 k new connections/min, mostly to 203.0.113.40:443, the table fills in ~15 minutes. New connections to that partner then can’t get a port, which the app sees as connect timeouts. The partner sees *less* traffic because our connections never leave the NAT. Other partners are mostly fine because the limit is per destination.',
+					body: 'A NAT gateway can hold ~55,000 simultaneous connections to one destination IP+port. Each new connection takes a port, and closed connections linger in [[tcp|TIME_WAIT]]. At 9.8 k new connections/min, mostly to 203.0.113.40:443, ports are taken faster than TIME_WAIT releases them (net growth ~3 k/min), so the table fills in ~15 minutes. New connections to that partner then can’t get a port, which the app sees as connect timeouts. The partner sees *less* traffic because our connections never leave the NAT. Other partners are mostly fine because the limit is per destination.',
 					confirm: 'ErrorPortAllocation > 0 (shown), and the [[vpc-flow-logs|VPC Flow Logs]] panel pins 92% of connections on one partner IP. Check the HTTP client config of the geo feature: likely a new client per call or `Connection: close`.'
 				}
 			]
@@ -963,7 +963,7 @@ const c7: Question = {
 			items: [
 				{
 					title: 'A [[gray-failure]] in one [[availability-zone]]: partial network impairment in 1b (packet loss), while the shallow health check keeps the hosts in rotation.',
-					body: 'Retransmits are the network-level fingerprint: packets are being lost and resent, so calls from 1b instances to their dependencies take far longer or time out. The health check only proves the process runs, so the ALB keeps routing a third of traffic there. Every 1b host is affected at the same moment, which points at the zone, not a bad deploy (a deploy would roll host by host).',
+					body: 'Retransmits are the network-level fingerprint: packets are being lost and resent, so calls from 1b instances to their dependencies take far longer or time out. The health check only proves the process runs, so the ALB keeps routing a third of traffic there. The whole 1b series steps up at one instant, which points at the zone, not a bad deploy (a deploy would roll host by host, so the AZ line would climb in stages).',
 					confirm: 'Compare per-instance metrics within 1b (all three should match), check the AWS Health dashboard, and run a cross-AZ latency probe from a 1b host.'
 				}
 			]
@@ -1060,13 +1060,13 @@ const t2: Question = {
 				spans: [
 					{ id: 'root', service: 'search-api', name: 'GET /search', start: 0, duration: 1912 },
 					{ id: 'auth', parent: 'root', service: 'auth', name: 'verify token', start: 3, duration: 14 },
-					{ id: 'fan', parent: 'root', service: 'search-api', name: 'fan-out to 8 shards', start: 20, duration: 1855 },
+					{ id: 'fan', parent: 'root', service: 'search-api', name: 'fan-out to 8 shards', start: 20, duration: 1858 },
 					...t2Shards,
-					{ id: 'merge', parent: 'root', service: 'search-api', name: 'merge + rank', start: 1876, duration: 31 }
+					{ id: 'merge', parent: 'root', service: 'search-api', name: 'merge + rank', start: 1879, duration: 31 }
 				]
 			}
 		},
-		{ type: 'p', text: 'Shard-level p99 for the fleet is 120 ms; this is happening on ~15% of searches.' }
+		{ type: 'p', text: 'Shard-level p95 for the fleet is 60 ms; this is happening on ~15% of searches.' }
 	],
 	answer: [
 		{
@@ -1078,14 +1078,14 @@ const t2: Question = {
 			items: [
 				{
 					title: 'Shard 5’s node is busy with a [[elasticsearch|segment merge]] (the span note), so it’s slow for every query that touches it.',
-					body: 'Merges, GC, a [[noisy-neighbor]] or a hot shard all make one node slow. With 8 shards per query, even a 2% per-shard slow rate makes ~15% of requests slow: 1 − 0.98⁸ ≈ 15%, matching the observed rate. That’s [[tail-latency]] amplification.',
+					body: 'Merges, GC, a [[noisy-neighbor]] or a hot shard all make one node slow. Every search fans out to all 8 shards, so if shard 5 is slow ~15% of the time (while merges run), ~15% of searches are slow, yet that is only ~1.9% of shard calls (15% ÷ 8), small enough to hide under a fleet-wide percentile. Diffuse slowness amplifies the same way: a 2% per-shard slow rate makes 1 − 0.98⁸ ≈ 15% of requests slow. That’s [[tail-latency]] amplification.',
 					confirm: 'Group shard span duration by `node`: index-7 will stand out. Check merge/GC metrics on that node.'
 				}
 			]
 		},
 		{
 			type: 'p',
-			text: '**Mitigations:** per-shard timeout with partial results (“results may be incomplete”), [[hedged-requests]] to a replica after the shard p95 (~60 ms), throttle merges during peak, and alert on per-node shard latency rather than the fleet p99, which averages the bad node away.'
+			text: '**Mitigations:** per-shard timeout with partial results (“results may be incomplete”), [[hedged-requests]] to a replica after the shard p95 (~60 ms), throttle merges during peak, and alert on per-node shard latency rather than the fleet p95, which the bad node’s ~2% of calls never reach.'
 		}
 	]
 };
@@ -1138,7 +1138,7 @@ const t3: Question = {
 			items: [
 				{
 					title: 'A job that runs every 15 minutes updates inventory rows in one long transaction (~4 min) and holds their row locks until it commits.',
-					body: 'Any request touching a locked SKU queues behind it (the trace’s `SELECT order FOR UPDATE` is a [[select-for-update|locking read]], so it must wait): that’s [[lock-wait]]. The guilty party is the *holder*, not the waiting UPDATE, which is why optimizing the cancel query would do nothing. The oldest-transaction panel lines up exactly with the waits.',
+					body: 'Any request touching a locked SKU queues behind it (here the `UPDATE inventory` needs the SKU row’s lock, so it waits; a [[select-for-update|locking read]] on a locked row would queue the same way, but the trace’s `SELECT order FOR UPDATE` targets the unlocked order row and returns in 3 ms): that’s [[lock-wait]]. The guilty party is the *holder*, not the waiting UPDATE, which is why optimizing the cancel query would do nothing. The oldest-transaction panel lines up exactly with the waits.',
 					confirm: 'During a spike: `SELECT pid, now() - xact_start, query FROM pg_stat_activity ORDER BY xact_start LIMIT 5` and `pg_blocking_pids(<waiting pid>)`.'
 				}
 			]
@@ -1274,7 +1274,7 @@ const te1: Question = {
 				style: 'grafana',
 				title: 'internal-admin',
 				panels: [
-					ts('Error rate', te1x, [S('errors / requests', te1Req.map((r, i) => (i === 24 ? 50 : i === 23 ? 25 : Math.round((2 / Math.max(r, 1)) * 1000) / 10)), 2)], { unit: '%', span: 3 }),
+					ts('Error rate', te1x, [S('errors / requests', te1Req.map((r, i) => (i === 24 ? 50 : Math.round((2 / Math.max(r, 1)) * 1000) / 10)), 2)], { unit: '%', span: 3 }),
 					ts('Requests / 5 min', te1x, [S('requests', te1Req, 0)], { span: 3 })
 				]
 			}
@@ -1368,7 +1368,7 @@ const te5: Question = {
 	answer: [
 		{
 			type: 'p',
-			text: 'Their traffic is ~4 req/s, ~14,400 requests an hour, of which 1% (~144) are traced. If 2% of their requests fail, you’d expect ~3 error traces, and finding zero is quite likely by chance. With [[trace-sampling|head-based sampling]] absence of evidence is not evidence. Check logs and metrics (unsampled), and use tail-based sampling that keeps every error.'
+			text: 'Their traffic is ~4 req/s, ~14,400 requests an hour, of which 1% (~144) are traced. If 2% of their requests fail, you’d expect ~3 error traces, and there is still a ~5% chance of finding zero; if only 0.5% fail, zero is roughly a coin flip. With [[trace-sampling|head-based sampling]] absence of evidence is not evidence. Check logs and metrics (unsampled), and use tail-based sampling that keeps every error.'
 		}
 	]
 };
@@ -1480,7 +1480,7 @@ const assessment: Assessment = {
 			type: 'callout',
 			tone: 'warn',
 			title: 'What graders look for',
-			text: 'Specific times and numbers quoted from the panels, an explicit “this moved first”, at least one thing ruled out with evidence, and arithmetic that ties the trigger to the symptom. “Latency went up because of the database” scores nothing; “pool wait rose at 14:11, a minute before p99, while DB CPU stayed at 28%” scores well.'
+			text: 'Specific times and numbers quoted from the panels, an explicit “this moved first”, at least one thing ruled out with evidence, and arithmetic that ties the trigger to the symptom. “Latency went up because of the database” scores nothing; “pool wait and p99 rose at 14:11, before p50, while DB CPU stayed at 28%” scores well.'
 		}
 	],
 	parts: [

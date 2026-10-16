@@ -123,7 +123,7 @@ const terms: GlossaryTerm[] = [
 			},
 			{
 				type: 'p',
-				text: 'From 11:00 a new band appears at 250 ms–1 s while the original band at the bottom keeps its shape. Roughly a fifth of requests moved. That is a question about **which** requests (one host? one tenant? one code path behind a [[feature-flag]]?), not about **all** requests. A p99 line would simply have jumped from ~120 ms to ~700 ms and hidden the distinction.'
+				text: 'From 11:00 a new band appears at 250 ms–1 s while the original band at the bottom keeps its shape. Roughly a fifth of requests moved. That is a question about **which** requests (one host? one tenant? one code path behind a [[feature-flag]]?), not about **all** requests. A p99 line would simply have jumped from ~350 ms to over 1 s and hidden the distinction.'
 			},
 			{
 				type: 'callout',
@@ -269,7 +269,7 @@ sum by (pod) (rate(container_cpu_cfs_throttled_periods_total[5m]))
 							yMin: 0,
 							yMax: 100,
 							x: credX,
-							series: [{ name: 'cpu', points: shape(48, { base: 10, noise: 0.08, seed: 4 }, step(12, 55), step(32, 20)) }],
+							series: [{ name: 'cpu', points: shape(48, { base: 10, noise: 0.08, seed: 4 }, step(12, 55)).map((v, i) => (i >= 32 ? 20 : v)) }],
 							thresholds: [{ value: 20, label: 'baseline 20%', tone: 'warn' }],
 							span: 3
 						}
@@ -278,7 +278,7 @@ sum by (pod) (rate(container_cpu_cfs_throttled_periods_total[5m]))
 			},
 			{
 				type: 'p',
-				text: 'Credits drain from 09:00 while CPU runs at ~55%. At 11:00 the balance hits zero and CPU drops to a perfectly flat 20%. That flat line at the baseline is the giveaway: real workloads are never that smooth. Demand didn’t fall; the hypervisor capped it.'
+				text: 'Credits drain from 09:00 while CPU runs at ~55%. At 14:00 the balance hits zero and CPU drops to a perfectly flat 20%. That flat line at the baseline is the giveaway: real workloads are never that smooth. Demand didn’t fall; the hypervisor capped it.'
 			},
 			{
 				type: 'table',
@@ -342,7 +342,7 @@ sum by (pod) (rate(container_cpu_cfs_throttled_periods_total[5m]))
 					['0 s', 'Worker A receives message M (receive count 1). M is hidden for 30 s.'],
 					['30 s', 'Timeout expires, M becomes visible again. Worker A is still busy.'],
 					['31 s', 'Worker B receives M (receive count 2). Now two workers process the same message.'],
-					['34 s', 'Worker A finishes, sends the email, deletes M using its receipt handle.'],
+					['34 s', 'Worker A finishes, sends the email, and tries to delete M with its now-stale receipt handle (B received M since), so the delete may not take effect.'],
 					['65 s', 'Worker B finishes: second email sent. Depending on timing, a third copy may already be in flight.'],
 					['…', 'After `maxReceiveCount` receives, M moves to the [[dead-letter-queue|DLQ]] even though it was processed successfully.']
 				]

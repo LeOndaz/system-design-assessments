@@ -65,7 +65,7 @@ const lab: Lab = {
 			details: (s, ) => [
 				['State', s._oldDeleted ? 'deleted' : 'active'],
 				['Scheduled deletion', s.scheduledDeletion ? 'T+02:00 (CHG-2291)' : 'cancelled'],
-				['Top client by requests', 'Java/1.8.0_202 partner-sync (6% of all traffic)']
+				['Top client by requests', 'Java/1.8.0_202 partner-sync, networkaddress.cache.ttl=-1 (6% of all traffic)']
 			],
 			status: (s) => (s._oldDeleted ? { label: 'Deleted', tone: 'crit' } : s.scheduledDeletion ? { label: 'Deletion scheduled', tone: 'warn' } : { label: 'Active', tone: 'ok' }),
 			fields: [{ key: 'scheduledDeletion', label: 'Scheduled deletion at T+2:00', kind: 'toggle' }],

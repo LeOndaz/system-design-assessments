@@ -298,7 +298,7 @@ func getOrder(w http.ResponseWriter, r *http.Request) {
 	answer: [
 		{
 			type: 'p',
-			text: 'The skill here is **classifying**: one of these is expected behaviour that was presented badly, one is within statistical error, and one is a privacy incident. Severity order is the reverse of the order they were reported in.'
+			text: 'The skill here is **classifying**: one of these is expected behaviour that was presented badly, one is within statistical error, and one is a privacy incident. Severity order is not the order they were reported in: the last one reported is the most serious.'
 		},
 		{
 			type: 'table',
@@ -411,17 +411,17 @@ def redact_pii(text: str) -> str:
 				panels: [
 					{
 						kind: 'timeseries',
-						title: 'Workers busy (of 4)',
+						title: 'Workers busy (of 2)',
 						x: timeAxis('10:05', 48),
-						series: [{ name: 'busy', points: shape(48, { base: 0.5, noise: 0.3, seed: 31, round: 1 }, step(9, 1), step(10, 2), step(11, 3), step(12, 4)) }],
-						yMax: 4,
+						series: [{ name: 'busy', points: shape(48, { base: 0.5, noise: 0.3, seed: 31, round: 1 }, step(9, 1), step(10, 2)) }],
+						yMax: 2,
 						span: 3
 					},
 					{
 						kind: 'timeseries',
 						title: 'ApproximateAgeOfOldestMessage (s)',
 						x: timeAxis('10:05', 48),
-						series: [{ name: 'age', points: shape(48, { base: 4, noise: 0.2, seed: 32 }, ramp(12, 47, 4, 2350)) }],
+						series: [{ name: 'age', points: shape(48, { base: 4, noise: 0.2, seed: 32 }, ramp(10, 47, 4, 2350)) }],
 						span: 3
 					}
 				]
@@ -449,8 +449,8 @@ def redact_pii(text: str) -> str:
 				},
 				{
 					title: '[[redos|ReDoS]] in the [[pii-redaction|PII]] regex froze the worker; redelivery re-ran the whole job.',
-					body: '`([a-zA-Z0-9]+[._-]?)*[a-zA-Z0-9]+@` has nested quantifiers with optional separators: on 64 `a`s followed by `!` (no `@`), the backtracking engine tries exponentially many ways to split the run before failing. The reply quoted the contact line, so `redact_pii` pinned a CPU. After 45 s [[amazon-sqs|SQS]] made the message visible again, a second worker picked it up, **ran the agent again** (2 more refunds = 4 total) and hung on the same regex. Each redelivery pinned another worker until all 4 were stuck: [[queue-age|queue age]] climbs from 10:17.',
-					confirm: 'Time `EMAIL.search("a"*30 + "!")` vs `"a"*40 + "!"`: it grows explosively. Workers-busy steps 1→4 one per ~45 s.'
+					body: '`([a-zA-Z0-9]+[._-]?)*[a-zA-Z0-9]+@` has nested quantifiers with optional separators: on 64 `a`s followed by `!` (no `@`), the backtracking engine tries exponentially many ways to split the run before failing. The reply quoted the contact line, so `redact_pii` pinned a CPU. After 45 s [[amazon-sqs|SQS]] made the message visible again, a second worker picked it up, **ran the agent again** (2 more refunds = 4 total) and hung on the same regex. That pinned the second worker too, so both were stuck: [[queue-age|queue age]] climbs from 10:15.',
+					confirm: 'Time `EMAIL.search("a"*30 + "!")` vs `"a"*40 + "!"`: it grows explosively. Workers-busy steps 1→2 about a minute apart (45 s timeout plus pickup).'
 				}
 			]
 		},
@@ -1157,7 +1157,7 @@ const d4q: Question = {
 			type: 'list',
 			items: [
 				'**Restate for legal:** "Each customer gets at least one copy; duplicates are extremely rare and harmless; we can show proof of send for every customer."',
-				'**Dedupe where the duplicate would be created:** a `notice_sends(customer_id PK, status, provider_message_id)` table; insert `PENDING` before calling the provider, so redelivered jobs see the row.',
+				'**Dedupe where the duplicate would be created:** a `notice_sends(customer_id PK, status, provider_message_id)` table; insert `PENDING` before calling the provider, so redelivered jobs see the row. A redelivered job that finds `PENDING` (the worker may have crashed after the provider accepted the message) handles it like a timeout: check the provider, then send or mark `SENT`, never just skip.',
 				'**Use the provider\'s idempotency / custom message-id header** if it has one; otherwise, on timeout, query the provider\'s message log by your custom id before re-sending.',
 				'**Evidence:** store provider message ids and delivery/bounce [[webhook|webhooks]]; produce a report of customers with no `delivered` event for follow-up via another channel (letter, in-app).',
 				'**Throttle:** 2.3 M at once will hit provider rate limits and spam heuristics; schedule over hours with warm-up per sending domain.'
@@ -1220,7 +1220,7 @@ const lab2q: Question = {
 			items: [
 				'Provision cache-v2 (~90 s to become available).',
 				'Turn on **dual-write**: every miss-fill and write also lands in v2, so v2 fills with exactly the keys real traffic uses ([[cache-warming]]). Watch *cache-v2 warm* climb.',
-				'At ≥ 90% warm, switch reads to v2. Hit rate jumps to ~97%, DB CPU drops to ~25%.',
+				'Once cache-v2 is (nearly) fully warm, switch reads to v2. Hit rate jumps to ~97%, DB CPU drops to ~23%. (Hit rate tracks warmth: at 90% warm you would get only ~87% hits and ~88% DB CPU, and the ≥ 94% target needs ~97% warm.)',
 				'Keep v1 for a few minutes as a rollback target, then turn off dual-write and decommission it.'
 			]
 		},
@@ -1228,7 +1228,7 @@ const lab2q: Question = {
 			type: 'callout',
 			tone: 'warn',
 			title: 'The clock is part of the puzzle',
-			text: 'Doing nothing also loses: v1 keeps [[eviction|evicting]] as the working set grows, and DB CPU creeps toward 100%. You can\'t wait for a quiet hour. And **FLUSHALL on v1** "to stop evictions" is the fastest way to lose: it empties the cache that is currently absorbing ~90% of reads.'
+			text: 'Doing nothing also loses: v1 keeps [[redis-eviction|evicting]] as the working set grows, and DB CPU creeps toward 100%. You can\'t wait for a quiet hour. And **FLUSHALL on v1** "to stop evictions" is the fastest way to lose: it empties the cache that is currently absorbing ~90% of reads.'
 		}
 	]
 };
@@ -1617,11 +1617,367 @@ const teasers: Question[] = [
 		answer: [
 			{
 				type: 'p',
-				text: 'Queueing delay grows like ρ/(1−ρ): 1.9 at 65%, 5.7 at 85%, 19 at 95%. At 85% a 10% traffic bump takes you to ~94% and waiting time roughly triples. Fine *today* is not [[headroom]] for a zone loss or a retry wave.'
+				text: 'Queueing delay grows like ρ/(1−ρ): 1.9 at 65%, 5.7 at 85%, 19 at 95%. At 85% a 10% traffic bump takes you to ~93.5% and waiting time grows about 2.5×. Fine *today* is not [[headroom]] for a zone loss or a retry wave.'
 			}
 		]
 	}
 ];
+
+
+// ═════════════════════════ PART 5 · AI, SECURITY, REAL-TIME ═════════════════════════
+
+const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+/** Labels like "Wed 09:00" for multi-day charts. */
+const dayClock = (count: number, stepMin: number, startDay = 0) =>
+	Array.from({ length: count }, (_, i) => {
+		const m = i * stepMin;
+		return `${DAYS[(startDay + Math.floor(m / 1440)) % 7]} ${String(Math.floor((m % 1440) / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+	});
+
+// h1 · shared semantic cache
+const h1x = dayClock(56, 180);
+const h1 = {
+	hit: shape(56, { base: 22, noise: 0.05, seed: 201, round: 1 }, step(16, 61)),
+	spend: shape(56, { base: 9800 / 8, noise: 0.05, seed: 202 }, step(16, 4900 / 8), wave(8, 0.35, -2)),
+	thumbsDown: shape(56, { base: 1.1, noise: 0.08, seed: 203, round: 2 }, step(16, 3.4)),
+	crossTenant: shape(56, { base: 0, noise: 0, seed: 1 }, step(16, 71.2))
+};
+
+const h1q: Question = {
+	id: 'h1',
+	title: 'The cache that halved the LLM bill',
+	tag: 'tricky',
+	minutes: 12,
+	prompt: [
+		{
+			type: 'ticket',
+			ticket: {
+				channel: 'slack',
+				from: 'Tomás Reyes',
+				role: 'CFO',
+				time: 'Fri 09:15',
+				body: `Love the AI cost work: support-assistant spend went from ~$9.8k/day to ~$4.9k/day since Wednesday. Can we roll the same "semantic cache" out to the other two assistants next week?
+
+Unrelated: CS says an Enterprise customer asked why the bot quoted them "your negotiated 18% discount". They don't have one.`
+			}
+		},
+		{
+			type: 'dashboard',
+			dashboard: {
+				style: 'datadog',
+				title: 'support-assistant',
+				range: 'Mon – Sat (3 h buckets)',
+				filters: ['600k requests/day', 'shared cache, cosine ≥ 0.92 (was 0.95)'],
+				panels: [
+					{ kind: 'timeseries', title: 'Semantic cache hit rate', unit: '%', x: h1x, series: [{ name: 'hit rate', points: h1.hit }], markers: [{ at: 16, label: 'threshold 0.95 → 0.92' }], span: 3 },
+					{ kind: 'timeseries', title: 'LLM spend per 3 h', unit: ' $', x: h1x, series: [{ name: 'spend', points: h1.spend, color: 2 }], span: 3 },
+					{ kind: 'timeseries', title: 'Thumbs-down rate', unit: '%', x: h1x, series: [{ name: 'thumbs down', points: h1.thumbsDown, color: 3 }], span: 3 },
+					{ kind: 'timeseries', title: 'Sampled hits served to a different tenant than the one that created the entry', unit: '%', x: h1x, series: [{ name: 'cross-tenant', points: h1.crossTenant, color: 4 }], span: 3 }
+				]
+			}
+		},
+		{ type: 'p', text: 'Facts: 600k requests/day, ~$0.021 per uncached request. Cache entries are keyed by question embedding only. A sample shows **9%** of cached answers contain tenant-specific facts (discounts, contract terms, names) because the assistant grounds on the asker\'s documents. Classify what you see, quantify the exposure, and answer the CFO.' }
+	],
+	answer: [
+		{
+			type: 'table',
+			head: ['Symptom', 'Classification', 'Why'],
+			rows: [
+				['"18% discount" quoted to the wrong customer', '**Security incident**', 'A [[semantic-cache]] shared across tenants serves answers grounded in another tenant\'s documents: a [[tenant-isolation]] failure.'],
+				['Thumbs-down 1.1% → 3.4%', '**Correctness bug**', 'Lowering the threshold to 0.92 matches questions that are near in embedding space but different in meaning ("cancel my plan" vs "cancel my invoice").'],
+				['Spend $9.8k → $4.9k/day', '**Expected, but illegitimate**', 'Real savings, earned by serving wrong and other tenants\' answers.']
+			]
+		},
+		{
+			type: 'p',
+			text: '**Exposure per day:** 600,000 × 61% = 366,000 cached responses; 71.2% of hits cross tenants and 9% of entries carry tenant facts → 366,000 × 0.712 × 0.09 ≈ **23,450 responses/day** that may reveal another customer\'s data. That is a [[personal-data-breach]] assessment, not a tuning ticket.'
+		},
+		{
+			type: 'table',
+			head: ['Scenario', 'Hit rate', 'Spend/day'],
+			rows: [
+				['No cache', '0%', '600k × $0.021 = $12,600'],
+				['Before (0.95, shared)', '22%', '$12,600 × 0.78 ≈ $9,830'],
+				['Now (0.92, shared)', '61%', '$12,600 × 0.39 ≈ $4,910'],
+				['Fixed (per-tenant key, tenant-agnostic answers only)', '~18%', '$12,600 × 0.82 ≈ $10,330']
+			],
+			numeric: [1, 2]
+		},
+		{
+			type: 'p',
+			text: 'The honest number for the CFO: the safe design costs **$5,418/day more** than today (≈ **$162k/month**), and is still cheaper than no cache. Recover cost safely with provider-side [[prompt-caching|prompt/prefix caching]] (keyed on exact prefixes, so no cross-tenant semantics), shorter retrieved context, and a smaller model for intents that don\'t need grounding.'
+		},
+		{
+			type: 'list',
+			ordered: true,
+			items: [
+				'**Now:** flag the cache off, purge it, keep logs. Do **not** roll it out to the other assistants.',
+				'**Scope:** join cache-hit logs (entry creator tenant vs requester tenant) and scan served text for tenant entities; list affected customer pairs for Legal and the DPO.',
+				'**Fix:** key by `(tenant, intent, normalised question)`; only cache answers produced without private context; per-intent thresholds tuned on an eval set; log similarity so drift is visible.',
+				'**Reply to the CFO:** savings paused because they came partly from a data-exposure bug; here is the safe cost curve.'
+			]
+		}
+	]
+};
+
+// h2 · collaborative editing at one customer's scale
+const h2x = timeAxis('09:00', 48, 5);
+const h2 = {
+	egress: shape(48, { base: 1.1, noise: 0.06, seed: 211, round: 2 }, ramp(12, 24, 1.1, 15.5), (i, v) => (i >= 24 ? 15.5 : v)),
+	editDelay: shape(48, { base: 0.08, noise: 0.1, seed: 212, round: 2 }, ramp(12, 24, 0.08, 6.5)),
+	activeUsers: shape(48, { base: 40, noise: 0.05, seed: 213 }, ramp(12, 24, 40, 900)),
+	docMb: shape(48, { base: 180, noise: 0.005, seed: 214, round: 1 })
+};
+
+const h2q: Question = {
+	id: 'h2',
+	title: '900 finance users open the same Q4-close workbook',
+	tag: 'tricky',
+	minutes: 12,
+	prompt: [
+		{ type: 'p', text: 'The new collaborative invoice workbook (CRDT document, one room server per document) works fine for teams of 20–50. At 10:00 Acme\'s entire finance org (900 people) opens the shared "Q4 close" workbook. Every client sends its cursor/selection at **20 Hz** to everyone in the room; each presence message is ~120 bytes. Edits are ~0.5 ops/s per user. The workbook has been open since July.' },
+		{
+			type: 'dashboard',
+			dashboard: {
+				style: 'grafana',
+				title: 'collab-rooms · room acme/q4-close',
+				range: '09:00 – 13:00',
+				panels: [
+					{ kind: 'timeseries', title: 'Room egress demanded (sent + queued)', unit: ' Gbps', x: h2x, series: [{ name: 'egress', points: h2.egress }], thresholds: [{ value: 10, label: 'NIC 10 Gbps', tone: 'crit' }], span: 3 },
+					{ kind: 'timeseries', title: 'Edit propagation p95', unit: ' s', x: h2x, series: [{ name: 'delay', points: h2.editDelay, color: 4 }], span: 3 },
+					{ kind: 'timeseries', title: 'Active users in room', x: h2x, series: [{ name: 'users', points: h2.activeUsers, color: 2 }], span: 3 },
+					{ kind: 'timeseries', title: 'Document size (CRDT, with tombstones)', unit: ' MB', x: h2x, series: [{ name: 'size', points: h2.docMb, color: 3 }], span: 3 }
+				]
+			}
+		},
+		{ type: 'p', text: 'Explain with numbers why it breaks at this size and not at 50; then propose the design change. The platform team suggests sharding rooms across more servers.' }
+	],
+	answer: [
+		{
+			type: 'p',
+			text: '**Presence fan-out is quadratic.** Each of N users sends 20 msg/s to N − 1 others: messages/s = 20·N·(N − 1). At N = 50: 49,000 msg/s. At N = 900: 900 × 899 × 20 = **16,182,000 msg/s** × 120 B ≈ 1.94 GB/s ≈ **15.5 Gbps**, past the 10 Gbps NIC. Edits are drowned in the same queue, hence 6.5 s propagation.'
+		},
+		{
+			type: 'ranked',
+			items: [
+				{
+					title: '[[interest-management|Interest management]] for presence.',
+					body: 'Send only cursors a user can see (same sheet, visible range), at 4 Hz, and aggregate the rest ("+812 viewing"). If each user sees ~15 others: 900 × 15 × 4 = **54,000 msg/s ≈ 6.5 MB/s**, a ~300× reduction.'
+				},
+				{
+					title: 'Separate, lossy presence from reliable ops.',
+					body: '[[presence]] can be dropped and coalesced (only the latest cursor matters); document ops cannot. Different channels and priorities keep a cursor flood from delaying edits. Batch ops per 50 ms tick per recipient: 900 × 20 = 18,000 deliveries/s instead of 450 × 899 = 404,550.'
+				},
+				{
+					title: 'Compact the document.',
+					body: '180 MB is months of [[crdt|CRDT]] tombstones. Snapshot + [[op-log-compaction|log compaction]] once every client has acknowledged a version, and lazy-load per sheet so joining doesn\'t ship 180 MB to 900 browsers at 10:00.'
+				}
+			]
+		},
+		{ type: 'callout', tone: 'warn', title: 'Why "shard the rooms" is the red herring', text: 'A room is the unit of fan-out: all 900 users must hear each other, so the work is 20·N² wherever it runs. Sharding helps many rooms, not one huge room. Cut N² (interest management, aggregation, lower Hz), don\'t spread it.' }
+	]
+};
+
+// h3 · LLM gateway capacity plan
+const h3q: Question = {
+	id: 'h3',
+	title: 'Capacity plan: an LLM gateway for launch, with a $45k/month budget',
+	tag: 'design',
+	minutes: 12,
+	prompt: [
+		{ type: 'p', text: 'You are sizing the self-hosted inference fleet for the assistant launch. Targets: **120 req/s at peak**, p95 TTFT under 1 s. Finance approved **$45k/month**.' },
+		{
+			type: 'table',
+			head: ['Input', 'Value'],
+			rows: [
+				['Prompt tokens (after prefix-caching the shared system prompt)', '2,400'],
+				['Output tokens (average)', '350'],
+				['KV cache per token (8B model, GQA)', '128 KiB'],
+				['KV budget per GPU after weights/runtime', '60 GiB'],
+				['Decode throughput per GPU with continuous batching (batch ~128)', '2,400 output tokens/s'],
+				['GPU price on demand / 1-year reserved', '$3.20 / $2.10 per hour'],
+				['Hours per month', '730']
+			]
+		},
+		{ type: 'p', text: 'How many GPUs, does memory or throughput bind, and how do you fit the budget without breaking the SLO?' }
+	],
+	answer: [
+		{
+			type: 'list',
+			ordered: true,
+			items: [
+				'**Throughput:** 120 req/s × 350 tokens = **42,000 output tokens/s** ÷ 2,400 per GPU = **17.5 → 18 GPUs**.',
+				'**Memory check:** 60 GiB ÷ 128 KiB = 491,520 tokens; ÷ 2,750 tokens per sequence = **~178 sequences per GPU**. Each sequence decodes at 2,400 ÷ 128 ≈ 18.75 tok/s, so 350 tokens take ≈ 18.7 s (+ ~0.3 s prefill). [[littles-law|Little\'s law]]: 120 × 19 ≈ **2,280 concurrent sequences**; 18 GPUs hold 18 × 178 = 3,204. So **throughput binds** here, not [[kv-cache|KV memory]] (unlike a long-context design).',
+				'**Headroom:** run at ≤70% to keep TTFT under 1 s through bursts and a failed node: 18 ÷ 0.7 ≈ 25.7 → **26 GPUs**.',
+				'**Cost:** 26 × $3.20 × 730 = **$60,736/month** on demand (over budget); 26 × $2.10 × 730 = **$39,858** reserved (fits, with ~$5k left for overflow).'
+			]
+		},
+		{
+			type: 'table',
+			head: ['Lever', 'Effect', 'Risk'],
+			rows: [
+				['Reserve the base (26 GPUs)', 'Fits the budget', '1-year commitment; size it to the launch forecast, not hope'],
+				['Cap output tokens / shorter answers', 'Fewer GPUs (throughput scales with output tokens)', 'Answer quality'],
+				['Route simple intents to a smaller model', 'Large cut if most traffic is FAQ-like', 'Needs an eval per route'],
+				['[[quantization|KV/weight quantization]]', 'More sequences per GPU', 'Helps memory, not this throughput-bound fleet much'],
+				['Overflow to a hosted API above the reserved base', 'Pay only for spikes', 'Data residency and a second provider to operate']
+			]
+		},
+		{ type: 'p', text: 'A staff answer states which constraint binds (throughput), shows the headroom maths, and offers a plan that meets both the SLO and the budget, plus what you would monitor at the [[llm-gateway]]: tokens/s per GPU, queue depth, [[ttft|TTFT]] and [[tpot|TPOT]] p95.' }
+	]
+};
+
+// h4 · poisoned dependency in the redaction pipeline
+const h4x = dayClock(40, 90, 1);
+const h4 = {
+	egress: shape(40, { base: 0.02, noise: 0.2, seed: 221, round: 2 }, step(9, 0.15)),
+	recall: shape(40, { base: 99.4, noise: 0.001, seed: 222, round: 2 }),
+	docs: shape(40, { base: 1800, noise: 0.05, seed: 223 })
+};
+
+const h4q: Question = {
+	id: 'h4',
+	title: 'The redaction service grew a new outbound destination',
+	tag: 'tricky',
+	minutes: 12,
+	prompt: [
+		{ type: 'p', text: 'Thursday 09:40: the egress proxy flags `redactor` (the service that strips personal data from customer invoices before they reach the analytics warehouse) sending traffic to `t.pii-telemetry.io`, a domain nobody recognises. Quality metrics are green.' },
+		{
+			type: 'logs',
+			logs: {
+				style: 'terminal',
+				title: 'redactor build #812 (Tue 13:52)',
+				lines: [
+					{ ts: '13:52:10', msg: 'pip install -r requirements.txt --extra-index-url https://pypi.internal.ledgerly.app/simple' },
+					{ ts: '13:52:14', msg: 'Looking in indexes: https://pypi.org/simple, https://pypi.internal.ledgerly.app/simple' },
+					{ ts: '13:52:19', msg: 'Collecting pii-patterns>=3.1' },
+					{ ts: '13:52:20', msg: 'Downloading pii-patterns-9.9.0-py3-none-any.whl (24 kB) from https://files.pythonhosted.org/…' },
+					{ ts: '13:52:31', msg: 'Successfully installed pii-patterns-9.9.0 regex-2026.9.1 spacy-3.8.2' },
+					{ ts: '14:10:02', level: 'INFO', msg: 'deploy redactor build #812 → prod (12 pods)' }
+				]
+			}
+		},
+		{
+			type: 'dashboard',
+			dashboard: {
+				style: 'datadog',
+				title: 'redactor',
+				range: 'Tue 00:00 – Thu 12:00 (90 min buckets)',
+				panels: [
+					{ kind: 'timeseries', title: 'Egress to unknown domains', unit: ' GB', x: h4x, series: [{ name: 'egress', points: h4.egress, color: 3 }], markers: [{ at: 9, label: 'build #812' }], span: 2 },
+					{ kind: 'timeseries', title: 'Redaction recall (sampled QA)', unit: '%', x: h4x, series: [{ name: 'recall', points: h4.recall, color: 4 }], yMin: 95, yMax: 100, span: 2 },
+					{ kind: 'timeseries', title: 'Documents redacted/min', x: h4x, series: [{ name: 'docs', points: h4.docs }], span: 2 }
+				]
+			}
+		},
+		{ type: 'p', text: 'Internal `pii-patterns` is at **3.4.2**. Explain what happened, the order of your actions, the scope, and the compliance clock.' }
+	],
+	answer: [
+		{
+			type: 'p',
+			text: '**[[dependency-confusion|Dependency confusion]].** `--extra-index-url` makes pip consider **both** indexes and pick the highest version, so a public `pii-patterns 9.9.0` beat internal 3.4.2. The package keeps the real regexes (so recall stays 99.4%) and adds a hook that ships samples of the **unredacted** input to `t.pii-telemetry.io`. Green quality metrics are the red herring: the attack never needed to break redaction.'
+		},
+		{
+			type: 'list',
+			ordered: true,
+			items: [
+				'**Contain:** block the domain at the egress proxy, then redeploy the last build pinned to internal 3.4.2 (or scale `redactor` to zero and pause the pipeline; a queue is cheaper than a leak).',
+				'**Preserve:** keep the 9.9.0 wheel, build logs, proxy logs and pod images for forensics ([[forensic-preservation]]).',
+				'**Scope:** exposure window Tue 14:10 → Thu 09:40 = 43.5 h × 60 × 1,800 docs/min ≈ **4.7 M documents** processed with the hook; proxy logs show ~4.35 GB sent (2.4 GB/day × 43.5/24). Rotate any secret present in the build or the pods.',
+				'**Compliance:** confirmed exfiltration of personal data → [[personal-data-breach]]; the GDPR 72-hour clock starts at awareness (Thu 09:40). Brief Legal/DPO now with known facts and open questions.',
+				'**Fix properly:** `--index-url` only (internal mirror proxying public), [[lockfile-integrity|hash-pinned lockfiles]] (`--require-hashes`), reserve your package names on public PyPI ([[typosquatting]] too), an egress allowlist for every service that touches PII, and an [[sbom|SBOM]] diff alert on new dependencies.'
+			]
+		}
+	]
+};
+
+// h5 · RAG retrieval tier after resharding
+const h5x = timeAxis('00:00', 48, 30);
+const h5 = {
+	p50: shape(48, { base: 38, noise: 0.05, seed: 231 }, step(20, 22)),
+	p99: shape(48, { base: 120, noise: 0.06, seed: 232 }, step(20, 410)),
+	shardP99: shape(48, { base: 95, noise: 0.05, seed: 233 }, step(20, 95)),
+	embed: shape(48, { base: 14, noise: 0.06, seed: 234 }),
+	shardCpu: shape(48, { base: 41, noise: 0.05, seed: 235 }, step(20, 18))
+};
+
+const h5q: Question = {
+	id: 'h5',
+	title: 'We split the vector index into 32 shards. The median got faster, the tail got 3× worse.',
+	tag: 'tricky',
+	minutes: 10,
+	prompt: [
+		{ type: 'p', text: 'To keep each shard in memory, retrieval for the assistant was moved from 4 to 32 shards on Wednesday 10:00. Each query fans out to all shards and waits for every one. A single shard is "slow" (compaction or GC hiccup) about 1% of the time.' },
+		{
+			type: 'dashboard',
+			dashboard: {
+				style: 'grafana',
+				title: 'retrieval tier',
+				range: 'Wed 00:00 – Thu 00:00',
+				panels: [
+					{ kind: 'timeseries', title: 'Query latency', unit: ' ms', x: h5x, series: [{ name: 'p50', points: h5.p50 }, { name: 'p99', points: h5.p99, color: 4 }], markers: [{ at: 20, label: '4 → 32 shards' }], span: 3 },
+					{ kind: 'timeseries', title: 'Per-shard p99', unit: ' ms', x: h5x, series: [{ name: 'shard p99', points: h5.shardP99, color: 3 }], span: 3 },
+					{ kind: 'timeseries', title: 'Embedding service p95', unit: ' ms', x: h5x, series: [{ name: 'embed', points: h5.embed, color: 2 }], span: 3 },
+					{ kind: 'timeseries', title: 'Shard CPU', unit: '%', x: h5x, series: [{ name: 'cpu', points: h5.shardCpu, color: 5 }], yMax: 100, span: 3 }
+				]
+			}
+		}
+	],
+	answer: [
+		{
+			type: 'p',
+			text: '**[[tail-latency|Tail at scale]] from [[fan-out]].** P(at least one of n shards is slow) = 1 − 0.99ⁿ. With 4 shards: 3.9% of queries hit a slow shard; with 32: **27.5%**. So the "rare" per-shard tail is now in more than a quarter of all queries, which is exactly why p99 jumped while p50 improved (each shard is smaller and faster). Per-shard p99 is unchanged at ~95 ms: no shard got worse, the *odds* did.'
+		},
+		{
+			type: 'ranked',
+			items: [
+				{ title: '[[hedged-requests|Hedge]] slow shard calls.', body: 'After ~p95 of shard latency, send the same sub-query to a replica and take the first answer; costs ~5% extra load and removes most of the tail.' },
+				{ title: 'Deadline + partial results.', body: 'Return top-k from the shards that answered by the deadline (30 of 32) and flag the answer as partial. For retrieval, missing 1 of 32 shards rarely changes the top results.' },
+				{ title: 'Query fewer shards.', body: 'Route by centroid ([[ivf-index|IVF-style]]) or tenant so a query touches a few shards, not all 32; and stagger compaction so shards aren\'t slow at the same time.' }
+			]
+		},
+		{ type: 'callout', tone: 'warn', title: 'Red herrings', text: '**Embedding p95** is flat (not the query side). **Shard CPU** fell (more, smaller shards): idle capacity is not the issue; waiting for the slowest of 32 is.' }
+	]
+};
+
+// d5 · redaction with a 5% LLM budget
+const d5q: Question = {
+	id: 'd5',
+	title: 'Redaction at ≥ 99.9% recall when only 5% of documents may touch an LLM',
+	tag: 'design',
+	minutes: 10,
+	prompt: [
+		{ type: 'p', text: 'Legal requires **≥ 99.9% entity recall** for invoices and support transcripts before they enter analytics. Cost allows an LLM pass on **5%** of documents. Your current cheap stack (regex + checksums + NER) has 99.0% recall. Design the pipeline and prove (with numbers) that it can meet the bar, and how you would *demonstrate* it to an auditor.' }
+	],
+	answer: [
+		{
+			type: 'p',
+			text: '**Why the obvious design fails:** "run the LLM on a random 5%" barely moves recall: 95% of documents keep the 99.0% stack. Even routing well isn\'t automatic. If the router captures 80% of the cheap stack\'s misses into the 5% and the LLM catches 97% of those, residual misses = 1% × (0.20 + 0.80 × 0.03) = 0.224% → recall **99.78%**, short of 99.9%.'
+		},
+		{
+			type: 'table',
+			head: ['Design', 'Residual miss rate', 'Recall', 'Meets 99.9%?'],
+			rows: [
+				['Cheap stack only', '1.0%', '99.0%', 'No'],
+				['Random 5% to LLM', '≈ 1.0% × (1 − 0.05 × 0.97)', '≈ 99.05%', 'No'],
+				['Router catches 80% of misses, LLM recall 97%', '0.224%', '99.78%', 'No'],
+				['Router catches 92% of misses, LLM recall 99%', '1% × (0.08 + 0.92 × 0.01) = 0.0892%', '99.91%', 'Yes']
+			],
+			numeric: [1, 2]
+		},
+		{
+			type: 'list',
+			items: [
+				'**Make misses predictable so the router can find them:** most misses are names in free text, unusual languages and scanned text. Route on those features (free-text length, language, OCR source, low NER confidence), not at random.',
+				'**Over-redact where it costs nothing:** fields analytics doesn\'t need (free-text notes, addresses) are dropped or masked wholesale, removing whole classes of misses before any model runs.',
+				'**Validators for structured data:** IBAN mod-97, card Luhn, email/phone formats: near-100% recall cheaply.',
+				'**Prove it:** recall can\'t be claimed from a vendor test set. Sample production documents, have humans label every entity, and use the rule of three: **3,000 labelled entities with zero misses** bounds the miss rate below 0.1% at 95% confidence (3 ÷ 0.001). Report per entity type ([[recall-precision]]), re-run monthly ([[data-drift]]).',
+				'**Assume errors correlate:** two detectors at 98% and 95% give 99.9% only if their misses are independent (1 − 0.02 × 0.05); names fool both, so measure the *joint* miss rate instead of multiplying.'
+			]
+		},
+		{ type: 'p', text: 'See [[redaction-ensemble]] and [[pii-redaction]]. The staff move is turning the requirement into a miss budget and showing which component spends it.' }
+	]
+};
 
 // ═════════════════════════ ASSESSMENT ═════════════════════════
 
@@ -1632,18 +1988,19 @@ const assessment: Assessment = {
 	tagline: 'Every question crosses domains: data, infra, security, money, AI, people. No single-topic warm-ups.',
 	description:
 		'The hardest set. Each incident hides two or three causes from different layers, every artifact (dashboard, log, code, ticket) matters, and several "obvious" fixes make things worse. You are graded on classification and ordering as much as on finding the bug: which of these is the emergency, which is expected behaviour, and what you do first.',
-	minutes: 190,
+	minutes: 260,
 	difficulty: 'advanced',
 	track: 'mixed',
-	topics: ['multi-region', 'streaming', 'LLM agents', 'consensus', 'search clusters', 'crypto', 'capacity', 'design', 'labs'],
+	topics: ['multi-region', 'streaming', 'LLM agents', 'consensus', 'search clusters', 'crypto', 'capacity', 'design', 'labs', 'semantic caches', 'GPU inference', 'supply chain', 'collaboration'],
 	overview: [
 		{
 			type: 'budget',
 			items: [
 				{ label: '1 · Layered incidents', minutes: 60 },
-				{ label: '2 · Design, twisted', minutes: 35 },
+				{ label: '2 · Design, twisted', minutes: 45 },
 				{ label: '3 · Labs', minutes: 25 },
 				{ label: '4 · Coding', minutes: 55 },
+				{ label: '5 · AI, security & real-time', minutes: 60 },
 				{ label: 'Rapid fire', minutes: 15 }
 			]
 		},
@@ -1683,10 +2040,10 @@ const assessment: Assessment = {
 		{
 			id: 'p2',
 			nav: '2 · Design',
-			eyebrow: 'Part 2 · 35 minutes · open design',
+			eyebrow: 'Part 2 · 45 minutes · open design',
 			title: 'Design with a twist',
 			meta: 'each prompt contains a constraint that kills the textbook answer',
-			minutes: 35,
+			minutes: 45,
 			intro: [
 				{
 					type: 'callout',
@@ -1694,7 +2051,7 @@ const assessment: Assessment = {
 					text: 'Lead with **why the obvious design fails under the stated constraint**, then present 2–4 options in a trade-off table, then commit to one and state what it costs. Reviewers look for the failure-mode column.'
 				}
 			],
-			questions: [d1q, d2q, d3q, d4q]
+			questions: [d1q, d2q, d3q, d4q, d5q]
 		},
 		{
 			id: 'p3',
@@ -1713,6 +2070,22 @@ const assessment: Assessment = {
 			meta: 'watermarks · late events · exactly-once emission',
 			minutes: 55,
 			questions: [c1q, c2q, c3q, c4q, c5q]
+		},
+		{
+			id: 'p5',
+			nav: '5 · AI & real-time',
+			eyebrow: 'Part 5 · 60 minutes · multi-domain',
+			title: 'AI, security and real-time: where the new failures hide',
+			meta: 'semantic caches · fan-out maths · GPU capacity · supply chain · tail at scale',
+			minutes: 60,
+			intro: [
+				{
+					type: 'callout',
+					tone: 'info',
+					text: 'Same rules as Part 1: classify every symptom (security, correctness, expected, within error), rank by harm, show the arithmetic. These systems fail in new places, but the reasoning is the same: find what binds, find the interaction, and say what you tell whom.'
+				}
+			],
+			questions: [h1q, h2q, h3q, h4q, h5q]
 		},
 		{
 			id: 'teasers',

@@ -1,4 +1,4 @@
-import type { Assessment } from '../types';
+import type { Assessment, Question } from '../types';
 import { bump, ramp, sawtooth, shape, step, timeAxis, wave, window_ } from '../series';
 import credentialStuffing from '../labs/a9-credential-stuffing';
 import cacheGrayFailure from '../labs/a9-cache-gray-failure';
@@ -23,9 +23,9 @@ const allP99 = shape(50, { base: 210, noise: 0.08, seed: 55 }, window_(17, 19, 2
 
 // Thursday: goroutines
 const xGo = timeAxis('00:00', 72, 20);
-const goroutines = shape(72, { base: 1400, noise: 0.02, seed: 61 }, (i, v) => v + i * 610 * (0.85 + 0.3 * Math.sin(i / 11.5)), (i, v) => (i >= 61 ? 1450 + (i - 61) * 600 : v));
-const heap = shape(72, { base: 180, noise: 0.03, seed: 62 }, (i, v) => v + i * 4.2, (i, v) => (i >= 61 ? 185 + (i - 61) * 4 : v));
-const rss = shape(72, { base: 260, noise: 0.03, seed: 63 }, (i, v) => v + i * 13.5, (i, v) => (i >= 61 ? 265 + (i - 61) * 13 : v));
+const goroutines = shape(72, { base: 1400, noise: 0.005, seed: 61 }, (i, v) => v + 610 * (0.85 * i - 0.3 * (72 / (2 * Math.PI)) * Math.cos(((i - 18) / 72) * 2 * Math.PI)));
+const heap = shape(72, { base: 180, noise: 0.03, seed: 62 }, (i, v) => v + i * 0.5);
+const rss = shape(72, { base: 260, noise: 0.03, seed: 63 }, (i, v) => v + i * 13.5);
 const timeoutsGo = shape(72, { base: 9, noise: 0.3, seed: 64 }, wave(72, 0.5, -18));
 
 // Thursday: secret rotation
@@ -36,7 +36,7 @@ const apiErr = shape(50, { base: 0.1, noise: 0.4, seed: 72, round: 2 });
 const reportingErr = shape(50, { base: 0, noise: 0, seed: 1 }, window_(43, 50, 96));
 
 // Friday: agent token spend
-const xTok = timeAxis('Fri 00:00', 1, 0).concat(timeAxis('01:00', 47, 30)).slice(0, 48);
+const xTok = timeAxis('00:00', 48, 30);
 const tokens = shape(48, { base: 1.1, noise: 0.15, seed: 81, round: 2 }, wave(48, 0.6, -12), step(30, 9.4), (i, v) => (i >= 30 ? v + (i - 30) * 0.4 : v));
 const tickets = shape(48, { base: 60, noise: 0.12, seed: 82 }, wave(48, 0.6, -12));
 const agentErrors = shape(48, { base: 0.4, noise: 0.5, seed: 83, round: 1 });
@@ -47,27 +47,613 @@ const xHook = ['Sun', 'Mon 00', 'Mon 06', 'Mon 09', 'Mon 12', 'Mon 18', 'Tue 00'
 const hooks2xx = [412, 398, 405, 120, 0, 0, 0, 0, 0, 0];
 const hooks403 = [0, 0, 0, 290, 410, 402, 395, 401, 398, 404];
 
+
+// ═════════════════ NEW DOMAINS (AI · security · performance · real-time) ═════════════════
+
+// Tue · embedding upgrade dashboard
+const xEmb = timeAxis('08:00', 48, 10);
+const ctr = shape(48, { base: 41, noise: 0.04, seed: 91, round: 1 }, step(12, 29), ramp(12, 48, 29, 31));
+const zeroClick = shape(48, { base: 18, noise: 0.06, seed: 92, round: 1 }, step(12, 33), ramp(12, 48, 33, 31));
+const offlineRecall = shape(48, { base: 0.86, noise: 0.004, seed: 93, round: 3 }, step(12, 0.87));
+const searchP95 = shape(48, { base: 120, noise: 0.05, seed: 94 }, step(12, 135));
+const backfill = shape(48, { base: 0, noise: 0, seed: 1, round: 1 }, ramp(12, 47, 0, 21.7));
+
+// Tue · lock contention after a "harmless" metrics change
+const xLock = timeAxis('13:00', 60);
+const lockP99 = shape(60, { base: 180, noise: 0.07, seed: 101 }, step(24, 1400));
+const lockCpu = shape(60, { base: 65, noise: 0.04, seed: 102 }, step(24, 40));
+const lockRps = shape(60, { base: 2200, noise: 0.03, seed: 103 });
+const lockGc = shape(60, { base: 2, noise: 0.2, seed: 104, round: 1 });
+
+// Wed · GPU inference pool at launch
+const xGpu = timeAxis('08:30', 60);
+const ttftP95 = shape(60, { base: 0.4, noise: 0.08, seed: 111, round: 2 }, step(30, 2.5), ramp(30, 52, 2.5, 9.2));
+const kvUsage = shape(60, { base: 38, noise: 0.04, seed: 112 }, step(30, 90), ramp(30, 36, 90, 98));
+const gpuUtil = shape(60, { base: 45, noise: 0.05, seed: 113 }, step(30, 60));
+const queueDepth = shape(60, { base: 0, noise: 0, seed: 1 }, ramp(31, 60, 0, 220));
+const launchRps = shape(60, { base: 9, noise: 0.08, seed: 114, round: 1 }, step(30, 40));
+
+// Fri · WebSocket reconnect storm
+const xWs = timeAxis('16:00', 40, 0.25);
+const wsConns = shape(40, { base: 180000, noise: 0.01, seed: 121 }, window_(8, 40, 0), (i, v) => (i >= 8 ? (i % 4 === 3 ? 40000 : 12000) : v));
+const wsAttempts = shape(40, { base: 200, noise: 0.1, seed: 122 }, (i, v) => (i >= 8 && i % 4 === 0 ? 45000 : i >= 8 ? 1500 : v));
+const authErr = shape(40, { base: 0.2, noise: 0.3, seed: 123, round: 1 }, (i, v) => (i >= 8 && i % 4 === 0 ? 81 : i >= 8 ? 12 : v));
+const gwCpu = shape(40, { base: 31, noise: 0.06, seed: 124 }, (i, v) => (i >= 8 ? 38 : v));
+
+// Weekend · registry audit log for the terminal investigation
+const registryAudit = (() => {
+	type Row = { ts: string; action: string; package: string; version?: string; token: string; ip: string; status: number; note?: string };
+	const at = (min: number) => `2026-10-15T${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}:00Z`;
+	const rows: [number, Row][] = [];
+	for (let i = 0; i < 150; i++) {
+		const m = i * 4;
+		rows.push([m, { ts: at(m), action: 'install', package: '@ledgerly/ui-kit', version: m >= 151 ? '4.2.1' : '4.2.0', token: 'tok_ci_read', ip: `10.20.${i % 4}.${10 + (i % 7)}`, status: 200 }]);
+	}
+	rows.push([70, { ts: at(70), action: 'install', package: '@ledgerly/ui-kit', version: '4.2.0', token: 'tok_npm_ci', ip: '140.82.112.33', status: 200, note: 'github-actions' }]);
+	rows.push([151, { ts: at(151), action: 'publish', package: '@ledgerly/ui-kit', version: '4.2.1', token: 'tok_npm_ci', ip: '185.220.101.47', status: 201 }]);
+	rows.push([153, { ts: at(153), action: 'dist-tag', package: '@ledgerly/ui-kit', version: '4.2.1', token: 'tok_npm_ci', ip: '185.220.101.47', status: 200, note: 'latest' }]);
+	rows.push([365, { ts: at(365), action: 'publish', package: '@ledgerly/icons', version: '2.0.3', token: 'tok_release', ip: '10.20.0.15', status: 201 }]);
+	rows.push([552, { ts: at(552), action: 'token_revoked', package: '-', token: 'tok_npm_ci', ip: '10.20.3.4', status: 200, note: 'security' }]);
+	rows.push([580, { ts: at(580), action: 'publish', package: '@ledgerly/ui-kit', version: '4.2.2', token: 'tok_npm_ci', ip: '185.220.101.47', status: 401 }]);
+	rows.push([583, { ts: at(583), action: 'install', package: '@ledgerly/ui-kit', version: '4.2.1', token: 'anonymous', ip: '45.155.205.9', status: 403 }]);
+	return rows
+		.sort((a, b) => a[0] - b[0])
+		.map(([, r]) => JSON.stringify(r))
+		.join('\n') + '\n';
+})();
+
+const monRag: Question = {
+	id: 'mon-rag-leak',
+	title: 'Legal: "Is the assistant hallucinating, or did it just show us another customer\'s contract?"',
+	tag: 'tricky',
+	minutes: 9,
+	prompt: [
+		{
+			type: 'ticket',
+			ticket: {
+				channel: 'email',
+				from: 'Ingrid Holm',
+				role: 'Legal Counsel',
+				subject: 'URGENT: Ask Ledgerly quoted a contract we have never seen',
+				time: 'Mon 10:47',
+				body: `Northwind Bakery forwarded this morning's "Ask Ledgerly weekly tips" email. Under "Your payment terms" it says: "Net 45, 2% monthly late fee, per your Fjordline Shipping master agreement §7.2."
+
+Northwind has never had a contract with Fjordline. Fjordline IS one of our customers. Engineering told me last month these assistants "sometimes make things up". Is this one of those? I need to know today whether this is a data breach.`
+			}
+		},
+		{
+			type: 'code',
+			lang: 'python',
+			caption: '`assistant/retrieval.py`, called by both the in-app chat and the weekly digest job (which runs from a worker, not an HTTP request).',
+			code: `def retrieve(question: str, tenant_id: str | None, k: int = 8):
+    vec = embed(question)
+    hits = index.query(vector=vec, top_k=k * 4, namespace="contracts",
+                       filter={"tenant_id": tenant_id} if tenant_id else None)
+    return [h for h in hits if h.score > 0.72][:k]
+
+# chat:   retrieve(q, request.headers.get("X-Tenant"))
+# digest: retrieve(q, request.headers.get("X-Tenant"))   # copied from chat`
+		},
+		{
+			type: 'logs',
+			logs: {
+				style: 'kibana',
+				title: 'assistant-retrieval',
+				query: 'service:assistant AND source:digest',
+				total: '3,212 hits',
+				lines: [
+					{ ts: 'Mon 06:00:04.112', level: 'INFO', source: 'digest-worker', msg: 'retrieve question="payment terms summary"', fields: { tenant: 'tn_northwind', filter: null, chunks: 'ct_fjord_19,ct_fjord_20,ct_acme_3', top_score: 0.91 } },
+					{ ts: 'Mon 06:00:04.380', level: 'INFO', source: 'digest-worker', msg: 'generate ok', fields: { tenant: 'tn_northwind', model: 'answer-v3', tokens: 812 } },
+					{ ts: 'Mon 06:00:05.022', level: 'INFO', source: 'digest-worker', msg: 'retrieve question="payment terms summary"', fields: { tenant: 'tn_brightline', filter: null, chunks: 'ct_fjord_19,ct_kestrel_2', top_score: 0.89 } },
+					{ ts: 'Mon 06:00:05.871', level: 'WARN', source: 'digest-worker', msg: 'no X-Tenant header; continuing', fields: { job: 'weekly-digest' } }
+				]
+			}
+		}
+	],
+	hints: ['The quote is word-for-word from a real document. What does that tell you about which stage produced it?', 'What does `filter` become when `tenant_id` is `None`?'],
+	answer: [
+		{
+			type: 'ranked',
+			items: [
+				{
+					title: 'Cross-tenant retrieval: the filter fails open when the tenant is missing.',
+					body: 'The digest runs in a worker with no HTTP request, so `X-Tenant` is `None`, the conditional turns the filter into `None`, and the query searches **every** tenant\'s contracts in the shared namespace. The log shows `filter: null` and chunk ids from Fjordline and Acme answering Northwind. This is a [[tenant-isolation]] failure, not model behaviour.',
+					confirm: 'For every digest retrieval since the digest shipped, compare each chunk\'s tenant with the requesting tenant. Any mismatch is an exposure.'
+				},
+				{
+					title: '[[hallucination|Hallucination]]: ruled out.',
+					body: 'Hallucinations are plausible-but-invented. This is a verbatim clause (§7.2 and all) that exists in Fjordline\'s document and appears in the retrieved chunk list. The tell is in [[rag|retrieval]], not generation.'
+				},
+				{
+					title: 'Shared namespace as the enabling design.',
+					body: 'One namespace for all tenants means a single missing filter exposes everything. Separate namespaces per tenant (or an enforced filter in the data-access layer) make this class of bug impossible rather than unlikely.'
+				}
+			]
+		},
+		{
+			type: 'p',
+			text: '**Severity:** treat it as a [[personal-data-breach|data breach]] until scoped: contract text names people and bank details. **Now:** kill-switch the digest ([[feature-flag]]), stop sending, preserve logs, tell Legal and the DPO it is a confirmed cross-tenant disclosure, not a model quirk. **Scope:** 3,212 digest retrievals; join chunk tenants to recipients to list exactly which customers saw whose data. **Fix properly:** [[fail-open-closed|fail closed]] (raise if tenant is missing), enforce the tenant filter inside the index client so callers cannot skip it, assert `chunk.tenant == request.tenant` after retrieval, and run jobs with an explicit tenant context instead of copying request code.'
+		},
+		{
+			type: 'ticket',
+			ticket: {
+				channel: 'email',
+				from: 'You',
+				role: 'On-call engineer',
+				subject: 'Re: URGENT: Ask Ledgerly quoted a contract we have never seen',
+				body: `Ingrid, this is not the assistant making things up. The weekly digest pulled text from other customers' contracts because a safety check was skipped for emails sent by our background job. Fjordline's terms were shown to Northwind, and likely others.
+
+We stopped the digest at 11:05 and kept all logs. By 15:00 you will have the exact list of which customers received text from which other customers. Please treat this as a data incident from now; I suggest looping in the DPO.`
+			}
+		}
+	]
+};
+
+const tueEmbed: Question = {
+	id: 'tue-embed-upgrade',
+	title: 'The new embedding model scored better offline. Users stopped clicking.',
+	tag: 'tricky',
+	minutes: 8,
+	prompt: [
+		{ type: 'p', text: "At 10:00 the search team switched the help-centre search to the new embedding model (`embed-v2`). The offline eval passed with a higher score. By lunch, support reports \"search got useless\". Nobody rolled back because \"the numbers say it's better\"." },
+		{
+			type: 'dashboard',
+			dashboard: {
+				style: 'grafana',
+				title: 'help-centre search',
+				range: 'Tue 08:00 – 16:00',
+				panels: [
+					{ kind: 'timeseries', title: 'Result click-through rate', unit: '%', x: xEmb, series: [{ name: 'CTR', points: ctr }], markers: [{ at: 12, label: 'embed-v2 queries' }], span: 3 },
+					{ kind: 'timeseries', title: 'Zero-click searches', unit: '%', x: xEmb, series: [{ name: 'zero-click', points: zeroClick, color: 4 }], span: 3 },
+					{ kind: 'timeseries', title: 'Offline recall@10 (golden set, nightly + on deploy)', x: xEmb, series: [{ name: 'recall@10', points: offlineRecall, color: 2 }], yMin: 0.7, yMax: 1, span: 2 },
+					{ kind: 'timeseries', title: 'Search p95 latency', unit: ' ms', x: xEmb, series: [{ name: 'p95', points: searchP95, color: 3 }], span: 2 },
+					{ kind: 'timeseries', title: 'Docs re-embedded with v2', unit: '%', x: xEmb, series: [{ name: 'backfill', points: backfill, color: 5 }], yMax: 100, span: 2 }
+				]
+			}
+		}
+	],
+	answer: [
+		{
+			type: 'ranked',
+			items: [
+				{
+					title: 'Mixed embedding spaces: queries are v2, ~78% of the index is still v1.',
+					body: 'The query side switched at 10:00, but the backfill is at 21.7% (412k of 1.9M docs) by 16:00. A v2 query vector compared with a v1 document vector is noise, so most results are effectively random. CTR dropped instantly (41% → 29%) and creeps back only as fast as the backfill. See [[embedding]] and [[recall-at-k]].',
+					confirm: 'Bucket clicks by whether the clicked doc has a v2 vector. v2 docs should be clicked at the old rate; v1 docs almost never.'
+				},
+				{
+					title: 'The offline eval measured a different index.',
+					body: 'The golden-set job runs against a staging index that was fully re-embedded, so it truthfully says "v2 is better when everything is v2". It cannot see a half-migrated production index. A [[golden-eval-set]] is only as good as the system it is run against.'
+				}
+			]
+		},
+		{ type: 'callout', tone: 'warn', title: 'Red herrings', text: '**Latency** (120 → 135 ms) is the bigger model, real but harmless. **Offline recall going up** is true and irrelevant: it is measuring staging. Neither explains users not clicking.' },
+		{ type: 'p', text: '**Now:** route queries back to v1 (one config flag); keep backfilling. **Fix properly:** [[dual-read]] by index version (v1 queries hit v1 vectors until the backfill is 100%), store `embedding_model_version` on every vector, switch atomically at the end ([[blue-green-deployment|blue/green]]), and run the eval against a snapshot of the production index before cut-over. Gate on online CTR from a small [[canary-analysis|canary]], not only offline scores.' }
+	]
+};
+
+const tueLock: Question = {
+	id: 'tue-p99-lock',
+	title: '"Just added a metrics counter." p99 went from 180 ms to 1.4 s and CPU went *down*.',
+	tag: 'tricky',
+	minutes: 8,
+	prompt: [
+		{
+			type: 'code',
+			lang: 'go',
+			caption: 'The 13:24 deploy to `invoice-render` (Go). Reviewed as "observability only".',
+			code: `var (
+    statsMu sync.Mutex
+    stats   = map[string]int{}
+)
+
+func countRender(customerID string, start time.Time) {
+    statsMu.Lock()
+    defer statsMu.Unlock()
+    key := fmt.Sprintf("%s|%s|%dms", customerID, time.Now().Format("15:04"),
+        time.Since(start).Milliseconds()/50*50)
+    stats[key]++
+    if len(stats) > 50_000 {
+        flushToStatsd(stats) // network call
+        stats = map[string]int{}
+    }
+}`
+		},
+		{
+			type: 'dashboard',
+			dashboard: {
+				style: 'grafana',
+				title: 'invoice-render',
+				range: 'Tue 13:00 – 14:00',
+				panels: [
+					{ kind: 'timeseries', title: 'p99 latency', unit: ' ms', x: xLock, series: [{ name: 'p99', points: lockP99, color: 4 }], markers: [{ at: 24, label: 'deploy' }], span: 3 },
+					{ kind: 'timeseries', title: 'CPU utilisation', unit: '%', x: xLock, series: [{ name: 'cpu', points: lockCpu, color: 2 }], yMax: 100, span: 3 },
+					{ kind: 'timeseries', title: 'Requests/s', x: xLock, series: [{ name: 'rps', points: lockRps }], span: 3 },
+					{ kind: 'timeseries', title: 'GC pause p99', unit: ' ms', x: xLock, series: [{ name: 'gc', points: lockGc, color: 3 }], span: 3 }
+				]
+			}
+		},
+		{
+			type: 'code',
+			lang: 'text',
+			caption: 'Off-CPU profile, folded stacks (top 4 by blocked time, 30 s sample).',
+			code: `render;handleInvoice;countRender;sync.(*Mutex).Lock;sync.(*Mutex).lockSlow;runtime.semacquire   61.8%
+render;handleInvoice;countRender;flushToStatsd;net.(*conn).Write                                 14.2%
+render;handleInvoice;db.Query;net.(*conn).Read                                                   12.9%
+render;handleInvoice;pdf.Render;runtime.mallocgc                                                  3.1%`
+		}
+	],
+	answer: [
+		{
+			type: 'ranked',
+			items: [
+				{
+					title: '[[lock-contention|Lock contention]] on one global mutex.',
+					body: 'Every request takes `statsMu`, and inside it does string formatting and, every so often, a **network call** (`flushToStatsd`). The [[off-cpu-analysis|off-CPU profile]] shows 61.8% of blocked time in `lockSlow`/`semacquire`. Requests queue on the lock, so latency explodes while CPU *falls* (65% → 40%): the threads are waiting, not working. This is [[amdahls-law|Amdahl]] in reverse: a serial section added to a parallel path.',
+					confirm: 'Mutex profile (`runtime.SetMutexProfileFraction`) or a [[flame-graph]] of blocked time; or simply revert and watch p99 snap back.'
+				},
+				{
+					title: 'Unbounded key [[cardinality]] makes the critical section long and the flush frequent.',
+					body: 'The key embeds customer × minute × 50 ms bucket, so the map hits 50k entries fast and the network flush happens *while holding the lock*.'
+				}
+			]
+		},
+		{ type: 'callout', tone: 'warn', title: 'Red herrings', text: '**GC** is flat at ~2 ms: not memory. **RPS** is flat: not load. The tell is CPU going *down* while latency goes up, which almost always means waiting (locks, pools, I/O), not computing.' },
+		{ type: 'p', text: '**Now:** revert. **Fix properly:** use the metrics library\'s lock-free counters with bounded labels (customer tier, not customer id; latency as a histogram, not a key), never do I/O under a lock, and if you must aggregate, shard the map or use per-goroutine buffers merged off the hot path. **Prevent:** "observability only" changes still go through load tests; add a mutex-wait alert.' }
+	]
+};
+
+const wedGpu: Question = {
+	id: 'wed-gpu-launch',
+	title: 'Ask Ledgerly goes GA at 09:00. By 09:20 answers take 9 seconds to start.',
+	tag: 'tricky',
+	minutes: 10,
+	prompt: [
+		{ type: 'p', text: 'The assistant runs a self-hosted 8B model on a pool of **4 GPUs (80 GB each)**, one replica per GPU, with continuous batching. For GA, product also raised retrieval from 4 to 16 chunks (375 tokens each) "so answers cite the whole contract". Launch traffic is 40 req/s; answers average 500 output tokens.' },
+		{
+			type: 'dashboard',
+			dashboard: {
+				style: 'grafana',
+				title: 'inference-pool',
+				range: 'Wed 08:30 – 09:30',
+				panels: [
+					{ kind: 'timeseries', title: 'TTFT p95', unit: ' s', x: xGpu, series: [{ name: 'ttft', points: ttftP95, color: 4 }], markers: [{ at: 30, label: 'GA' }], span: 3 },
+					{ kind: 'timeseries', title: 'KV-cache usage', unit: '%', x: xGpu, series: [{ name: 'kv', points: kvUsage, color: 3 }], yMax: 100, thresholds: [{ value: 95, tone: 'crit', label: 'preempting' }], span: 3 },
+					{ kind: 'timeseries', title: 'GPU utilisation', unit: '%', x: xGpu, series: [{ name: 'util', points: gpuUtil, color: 2 }], yMax: 100, span: 2 },
+					{ kind: 'timeseries', title: 'Queued requests', x: xGpu, series: [{ name: 'queue', points: queueDepth }], span: 2 },
+					{ kind: 'timeseries', title: 'Requests/s', x: xGpu, series: [{ name: 'rps', points: launchRps, color: 1 }], span: 2 }
+				]
+			}
+		},
+		{
+			type: 'table',
+			head: ['Model fact', 'Value'],
+			rows: [
+				['Layers', '32'],
+				['KV heads (GQA) × head dim', '8 × 128'],
+				['Weights (fp16)', '16 GB'],
+				['KV-cache budget per GPU after weights and runtime', '60 GiB'],
+				['Decode speed per sequence in a full batch', '~40 tokens/s']
+			]
+		},
+		{ type: 'p', text: 'Explain the bottleneck with numbers, then say what you change first and why adding replicas is not the first move.' }
+	],
+	answer: [
+		{
+			type: 'p',
+			text: '**[[kv-cache|KV-cache]] memory, not compute, caps concurrency.** Per token: 2 (K and V) × 32 layers × 8 heads × 128 dims × 2 bytes = **131,072 bytes (128 KiB)**. 60 GiB ÷ 128 KiB = **491,520 tokens** of cache per GPU.'
+		},
+		{
+			type: 'table',
+			head: ['', 'Beta (4 chunks)', 'GA (16 chunks)'],
+			rows: [
+				['Prompt + output tokens per request', '1,500 + 500 = 2,000', '6,000 + 500 = 6,500'],
+				['Concurrent sequences per GPU', '491,520 ÷ 2,000 ≈ 245', '491,520 ÷ 6,500 ≈ 75'],
+				['Pool capacity (4 GPUs)', '~980', '~300']
+			],
+			numeric: [1, 2]
+		},
+		{
+			type: 'p',
+			text: 'Demand by [[littles-law|Little\'s law]]: 40 req/s × ~13 s in system (500 tokens at ~40 tok/s + prefill) ≈ **520 concurrent sequences**. GA capacity is ~300, so requests queue and the scheduler preempts, which is exactly the [[ttft|TTFT]] curve. With beta prompts the same pool holds ~980.'
+		},
+		{
+			type: 'ranked',
+			items: [
+				{ title: 'First: cut the context back (4–6 chunks via a [[reranker]]).', body: 'That alone restores ~3× concurrency in one config change and usually improves answers ([[lost-in-the-middle]]).' },
+				{ title: 'Then: admission control and per-tenant limits at the [[llm-gateway]].', body: 'Fail fast with a friendly "busy" instead of a 9 s spinner; cap max output tokens.' },
+				{ title: 'Then: [[prompt-caching|prefix caching]] for the shared system prompt, and capacity.', body: 'At 6,500 tokens/request you would need 520 ÷ 75 ≈ **7 GPUs**; new replicas take minutes to load weights and may hit GPU quota, so they are the slow lever, not the first one.' }
+			]
+		},
+		{ type: 'callout', tone: 'warn', title: 'Red herring', text: '**GPU utilisation at 60%** tempts people to say "the GPUs aren\'t busy". Decode is memory-bound and the batch size is capped by KV memory, so utilisation stays middling while the queue grows.' }
+	]
+};
+
+const thuPii: Question = {
+	id: 'thu-pii-traces',
+	title: 'Privacy finds IBANs and names in the LLM traces. "But redaction is 98% recall."',
+	tag: 'core',
+	minutes: 8,
+	prompt: [
+		{ type: 'p', text: 'Every assistant call is exported to an external LLM-observability vendor (prompt, retrieved chunks, answer), after a redaction step. The same traces were sampled to build next quarter\'s eval set. The ML lead says recall is 98% "so leaks are rare". Volume: 2.1M traces/month.' },
+		{
+			type: 'table',
+			head: ['Entity type', 'Avg per trace', 'Recall (test set)'],
+			rows: [
+				['Email address', '1.2', '99.6%'],
+				['IBAN', '0.3', '99.9%'],
+				['Person name', '1.5', '95.4%']
+			],
+			numeric: [1, 2]
+		},
+		{ type: 'p', text: 'How many entities leak per month, what is the real recall, and what do you do about the vendor and the eval set?' }
+	],
+	answer: [
+		{
+			type: 'table',
+			head: ['Entity', 'Leaked per trace', 'Per month (× 2.1M)'],
+			rows: [
+				['Email', '1.2 × 0.004 = 0.0048', '10,080'],
+				['IBAN', '0.3 × 0.001 = 0.0003', '630'],
+				['Name', '1.5 × 0.046 = 0.069', '144,900'],
+				['**Total**', '**0.0741**', '**155,610**']
+			],
+			numeric: [1, 2]
+		},
+		{
+			type: 'p',
+			text: 'Real recall over this traffic is 1 − 0.0741 ÷ 3.0 = **97.5%**, and **93%** of the leaks are names. "98%" was a micro-average on a test set dominated by emails, the easiest type. See [[recall-precision]] and [[redaction-ensemble]].'
+		},
+		{
+			type: 'list',
+			items: [
+				'**Stop the bleed:** turn off raw prompt/chunk export to the vendor (send ids, token counts and hashed spans instead); this is third-party disclosure of [[pii]], so loop in the DPO.',
+				'**Purge:** ask the vendor to delete retained traces and get written confirmation; check their retention and sub-processors.',
+				'**Eval set:** quarantine it; rebuild from consented or synthetic data. Production traces in eval sets are a classic [[phi-in-telemetry|telemetry leak]] that outlives the fix.',
+				'**Fix redaction properly:** measure recall *per entity type on production-like data*; add a name-focused NER pass plus validators; over-redact free text by default where you can.',
+				'**Prevent:** redact at the source (before anything leaves the service), and treat traces and evals as production data with the same access rules.'
+			]
+		}
+	]
+};
+
+const thuCi: Question = {
+	id: 'thu-ci-token',
+	title: '02:31: someone published `@ledgerly/ui-kit` 4.2.1. Our release pipeline didn\'t.',
+	tag: 'tricky',
+	minutes: 9,
+	prompt: [
+		{ type: 'p', text: 'Registry alert at 08:50: a new version of the internal UI kit, used by every Ledgerly frontend (`"@ledgerly/ui-kit": "^4.2.0"`), was published at 02:31 with the CI token `NPM_TOKEN`. At 02:14 an outside contributor opened PR #3318 "fix typo in README" from a fork. The diff shows only README changes.' },
+		{
+			type: 'code',
+			lang: 'yaml',
+			caption: '`.github/workflows/test.yml`',
+			code: `on: pull_request_target
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: \${{ github.event.pull_request.head.sha }}
+      - run: npm ci && npm test
+        env:
+          NPM_TOKEN: \${{ secrets.NPM_TOKEN }}`
+		},
+		{ type: 'p', text: 'Options on the table: **(A)** delete the workflow file, **(B)** revoke `NPM_TOKEN`, deprecate 4.2.1 and pin consumers, rotate every secret that job could read, **(C)** disable Actions org-wide, **(D)** re-run the workflow with debug logging to see what happened. Rank them and say what you would check that the README-only diff hides.' }
+	],
+	answer: [
+		{
+			type: 'ranked',
+			items: [
+				{
+					title: '(B) first: contain the credential and the artifact.',
+					body: 'Revoke the token, deprecate (and unpublish within the registry\'s window) 4.2.1, move `latest` back to 4.2.0, and pin consumers. Then rotate **every** secret that job could read (the token was not the only thing in the environment). Find builds since 02:31 that installed 4.2.1: any `^4.2.0` consumer resolving fresh, or any build that updated its lockfile, pulled it.',
+					confirm: 'Registry audit log: publishes and installs of 4.2.1 by IP and token (the weekend question does exactly this).'
+				},
+				{
+					title: '(A) next, as part of the fix, not as containment.',
+					body: 'Deleting the file stops future runs but does nothing about the published package or the stolen token.'
+				},
+				{ title: '(C) only if you can\'t scope it.', body: 'Org-wide disable is a big hammer that blocks your own release of the fix; use it if other repos share the pattern and you can\'t audit them fast.' },
+				{ title: '(D) never.', body: 'Re-running executes the attacker\'s code again with secrets attached.' }
+			]
+		},
+		{
+			type: 'p',
+			text: '**What the diff hides:** [[pull-request-target|`pull_request_target`]] runs with the base repo\'s secrets, and this workflow checks out the **PR head**, so `npm ci` executes the fork\'s `package.json` lifecycle scripts ([[npm-lifecycle-scripts|`preinstall`/`pretest`]]). The README is decoration; the payload is in `package.json`. **Fix properly:** untrusted code runs under `pull_request` (no secrets); publishing uses [[ci-oidc-federation|OIDC trusted publishing]] from a protected release job; consumers use lockfiles with integrity hashes ([[lockfile-integrity]]). This is a [[severity-triage|SEV1]] supply-chain incident: tell every frontend team now.'
+		}
+	]
+};
+
+const friWs: Question = {
+	id: 'fri-ws-storm',
+	title: '16:02 deploy of the live-status gateway. Every 60 seconds, everyone disconnects again.',
+	tag: 'core',
+	minutes: 7,
+	prompt: [
+		{ type: 'p', text: '180k browsers hold a WebSocket to `notify-gateway` for live invoice status. A routine deploy restarted all gateway pods at once at 16:02. Clients reconnect after a fixed 1 s delay; each reconnect calls `auth-svc` to validate the session (capacity ~8,000 checks/s). The gateway team wants to double the gateway pods.' },
+		{
+			type: 'dashboard',
+			dashboard: {
+				style: 'grafana',
+				title: 'notify-gateway',
+				range: 'Fri 16:00 – 16:10 (15 s buckets)',
+				panels: [
+					{ kind: 'timeseries', title: 'Open connections', x: xWs, series: [{ name: 'connections', points: wsConns }], markers: [{ at: 8, label: 'deploy' }], span: 3 },
+					{ kind: 'timeseries', title: 'Reconnect attempts/s', x: xWs, series: [{ name: 'attempts', points: wsAttempts, color: 3 }], span: 3 },
+					{ kind: 'timeseries', title: 'auth-svc error rate', unit: '%', x: xWs, series: [{ name: '5xx', points: authErr, color: 4 }], span: 3 },
+					{ kind: 'timeseries', title: 'Gateway CPU', unit: '%', x: xWs, series: [{ name: 'cpu', points: gwCpu, color: 2 }], yMax: 100, span: 3 }
+				]
+			}
+		}
+	],
+	answer: [
+		{
+			type: 'p',
+			text: '**A synchronized [[reconnect-storm]].** 180,000 clients on the same fixed 1 s delay all hit `auth-svc` at once (45k attempts/s against ~8k/s capacity). Most fail, retry after exactly 1 s, and arrive together again, so the waves never spread out. Even perfectly paced, re-admitting everyone needs 180,000 ÷ 8,000 = **22.5 s**; synchronized, it never finishes.'
+		},
+		{
+			type: 'list',
+			items: [
+				'**Now:** turn on gateway [[admission-control]] (accept ~7k new sessions/s, answer the rest with a jittered [[retry-after|Retry-After]]); ship the client change behind a flag if you can.',
+				'**Client fix:** [[exponential-backoff]] with full [[jitter]] (e.g. random 0–2ˢ s, capped), and a resume token so reconnects skip full auth.',
+				'**Deploy fix:** roll pods gradually with [[connection-draining]] over minutes, so disconnects arrive as a trickle, not a cliff.'
+			]
+		},
+		{ type: 'callout', tone: 'warn', title: 'Red herring', text: '**Gateway CPU at 38%**: gateways are not the bottleneck, `auth-svc` is. Doubling gateways adds more concurrent callers to the thing that is already failing.' }
+	]
+};
+
+const friReview: Question = {
+	id: 'fri-review-rag-fix',
+	title: 'Code review: the fix for Monday\'s assistant leak',
+	tag: 'tricky',
+	minutes: 10,
+	prompt: [
+		{ type: 'p', text: 'Monday\'s cross-tenant leak (the digest job retrieving every tenant\'s contracts) has a fix PR. The author is in a hurry to re-enable the digest. Review it: flag every line you would comment on.' },
+		{
+			type: 'diff',
+			diff: {
+				title: 'fix(assistant): always filter retrieval by tenant',
+				author: 'dmitri',
+				description: 'Closes INC-2291. Digest jobs have no `X-Tenant` header, so we now fall back to a default tenant instead of querying without a filter. Also adds a small answer cache to cut LLM cost for repeated digest questions, and logging to help debug retrieval.',
+				files: [
+					{
+						path: 'assistant/retrieval.py',
+						lang: 'python',
+						patch: `@@ -1,18 +1,27 @@
+ import logging
++from functools import lru_cache
+
+ from .index import index
+ from .embed import embed
++from .settings import DEFAULT_TENANT
+
+ log = logging.getLogger(__name__)
+
+
+ def retrieve(question: str, tenant_id: str | None, k: int = 8):
++    question = question.strip()
++    if not tenant_id:
++        tenant_id = DEFAULT_TENANT  # digest jobs have no X-Tenant header
+     vec = embed(question)
+     hits = index.query(vector=vec, top_k=k * 4, namespace="contracts",
+-                       filter={"tenant_id": tenant_id} if tenant_id else None)
++                       filter={"tenant_id": tenant_id})
++    log.info("retrieved %s", [h.text for h in hits])
+     return [h for h in hits if h.score > 0.72][:k]
+
+
++@lru_cache(maxsize=10_000)
++def cached_answer(question: str) -> str:
++    return generate(question, retrieve(question, current_tenant()))`,
+						notes: [
+							{ match: 'tenant_id = DEFAULT_TENANT', issue: '**Still fails open, just differently.** Every digest now retrieves the *default* tenant\'s contracts for every recipient: a new cross-tenant leak. A missing tenant must raise ([[fail-open-closed|fail closed]]); the digest job must pass its tenant explicitly.', severity: 'blocker' },
+							{ match: '@lru_cache(maxsize=10_000)', issue: '**Cross-tenant cache.** The key is only the question text, so tenant A\'s answer (built from A\'s contracts) is served to tenant B asking the same question. Key by `(tenant_id, question)` or don\'t cache tenant-grounded answers at all; see [[semantic-cache]].', severity: 'blocker' },
+							{ match: 'log.info("retrieved %s"', issue: '**Logs raw contract text.** Chunks contain names, bank details and terms; this ships them to the log pipeline (Thursday\'s traces problem again). Log chunk ids and scores, never text.', severity: 'major' },
+							{ match: 'question = question.strip()', decoy: 'Harmless normalisation; it slightly improves cache hits and embedding consistency.' },
+							{ match: 'top_k=k * 4', decoy: 'Over-fetching then filtering by score is deliberate: it leaves headroom after the 0.72 threshold drops weak hits.' }
+						]
+					},
+					{
+						path: 'tests/test_retrieval.py',
+						lang: 'python',
+						patch: `@@ -0,0 +1,4 @@
++def test_retrieve_filters_by_tenant(fake_index):
++    retrieve("payment terms", tenant_id="t1")
++    assert fake_index.last_filter == {"tenant_id": "t1"}
++`,
+						notes: [
+							{ match: 'assert fake_index.last_filter', issue: 'Tests only the happy path. The incident was the **missing tenant** case: add a test that `retrieve(q, None)` raises, and one that asserts every returned chunk\'s tenant equals the caller\'s.', severity: 'minor' }
+						]
+					}
+				]
+			}
+		}
+	],
+	answer: [
+		{
+			type: 'list',
+			ordered: true,
+			items: [
+				'**Request changes (blocker):** `DEFAULT_TENANT` replaces "no filter" with "the wrong filter": still a leak. Raise on a missing tenant; make the digest pass it.',
+				'**Request changes (blocker):** the `lru_cache` keyed on question text serves one tenant\'s grounded answer to another.',
+				'**Must fix (major):** don\'t log chunk text; log ids and scores.',
+				'**Should add (minor):** a negative test for the missing-tenant path and a post-retrieval tenant assertion.'
+			]
+		},
+		{ type: 'p', text: 'Leave the decoys alone: the `.strip()` and the `top_k=k * 4` over-fetch are fine. A good review of an incident fix asks "does this make the *class* of bug impossible?" This PR moves the hole instead of closing it.' }
+	]
+};
+
+const wkndRegistry: Question = {
+	id: 'wknd-registry',
+	title: 'Saturday: security wants the attacker\'s IP from the registry audit log',
+	tag: 'core',
+	minutes: 6,
+	prompt: [
+		{
+			type: 'terminal',
+			terminal: {
+				title: 'ops@registry-audit',
+				user: 'ops',
+				host: 'registry-audit',
+				motd: 'Thursday incident follow-up. Registry audit export (NDJSON) is in /var/log/registry/.',
+				task: 'Thursday\'s leaked `tok_npm_ci` published `@ledgerly/ui-kit` 4.2.1. Find the IP address that published **4.2.1** and submit it. Then work out how many internal CI installs pulled 4.2.1 in this export.',
+				files: {
+					'/var/log/registry/audit.log': registryAudit,
+					'/var/log/registry/README': 'Fields: ts, action (install|publish|dist-tag|token_revoked), package, version, token, ip, status, note.\nInternal CI runs from 10.20.0.0/16.\n',
+					'/home/ops/notes.md': '- tok_release = release pipeline (10.20.0.15)\n- tok_ci_read = read-only install token\n- tok_npm_ci = the leaked one\n'
+				},
+				hints: ['head -3 /var/log/registry/audit.log', "jq -r .action /var/log/registry/audit.log | sort | uniq -c", "jq -c 'select(.action == \"publish\")' /var/log/registry/audit.log"],
+				answer: {
+					prompt: 'ip',
+					check: (a) => (a.trim() === '185.220.101.47' ? true : a.trim() === '10.20.0.15' ? 'That is the release pipeline publishing a different package.' : 'Filter publishes of version 4.2.1.'),
+					success: 'That IP also tried to publish 4.2.2 after revocation (401).'
+				},
+				solution: [
+					"jq -c 'select(.action == \"publish\")' /var/log/registry/audit.log",
+					"jq -r 'select(.action == \"publish\" and .version == \"4.2.1\") | .ip' /var/log/registry/audit.log",
+					"jq -r 'select(.action == \"install\" and .version == \"4.2.1\" and .token == \"tok_ci_read\") | .ip' /var/log/registry/audit.log | wc -l",
+					'submit 185.220.101.47'
+				]
+			}
+		}
+	],
+	answer: [
+		{ type: 'code', lang: 'bash', code: `jq -c 'select(.action == "publish")' /var/log/registry/audit.log
+jq -r 'select(.action == "publish" and .version == "4.2.1") | .ip' /var/log/registry/audit.log
+# 185.220.101.47
+
+jq -r 'select(.action == "install" and .version == "4.2.1" and .token == "tok_ci_read") | .ip' \\
+  /var/log/registry/audit.log | wc -l
+# 112` },
+		{ type: 'p', text: '**185.220.101.47** published 4.2.1 at 02:31, moved the `latest` tag at 02:33, and tried 4.2.2 at 09:40 (rejected with 401 after the 09:12 revocation). **112** internal CI installs from 10.20.x pulled 4.2.1 between 02:32 and the end of the export (09:56), **100 of them before** the 09:12 revocation and 12 after: revoking the *publish* token does not stop consumers resolving `^4.2.0` to 4.2.1; only deprecating/unpublishing it and moving `latest` back does. Every one of those builds, and anything they deployed, is in scope. The 10.20.0.15 publish of `@ledgerly/icons` is the legitimate release pipeline (decoy), and the 01:10 use of `tok_npm_ci` from 140.82.112.33 is GitHub Actions before the leak.' }
+	]
+};
+
 const a9: Assessment = {
 	id: 'mixed-on-call-week',
 	number: 9,
 	title: 'Mixed I: On-call week',
 	tagline: 'Monday to the weekend at a mid-size SaaS: security, infra, data, people. Each day\'s fix seeds a later incident.',
 	description:
-		'You are on call for **Ledgerly**, an invoicing SaaS, for one week. Every question type appears: support tickets, dashboards, logs, traces, code, two live console labs, a coding task, a design question and the Friday postmortem. Days are connected: a mitigation you approve on Monday becomes Wednesday\'s incident, and Friday asks you to see the pattern. Expect the obvious answer to be wrong, and expect to rank **security above availability above cosmetics** when things collide.',
-	minutes: 235,
+		'You are on call for **Ledgerly**, an invoicing SaaS, for one week. Every question type appears: support tickets, dashboards, logs, traces, code, two live console labs, a pull-request review, a terminal investigation, a coding task, a design question and the Friday postmortem. Days are connected: a mitigation you approve on Monday becomes Wednesday\'s incident, and Friday asks you to see the pattern. Expect the obvious answer to be wrong, and expect to rank **security above availability above cosmetics** when things collide.',
+	minutes: 310,
 	difficulty: 'advanced',
 	track: 'mixed',
-	topics: ['security incidents', 'severity judgment', 'infra labs', 'runtime bugs', 'LLM agents', 'postmortems'],
+	topics: ['security incidents', 'severity judgment', 'infra labs', 'runtime bugs', 'LLM agents', 'RAG & redaction', 'GPU inference', 'supply chain', 'real-time', 'code review', 'terminal', 'postmortems'],
 	overview: [
 		{
 			type: 'budget',
 			items: [
-				{ label: 'Monday', minutes: 40 },
-				{ label: 'Tuesday', minutes: 40 },
-				{ label: 'Wednesday', minutes: 45 },
-				{ label: 'Thursday', minutes: 40 },
-				{ label: 'Friday', minutes: 55 },
-				{ label: 'Weekend', minutes: 15 }
+				{ label: 'Monday', minutes: 49 },
+				{ label: 'Tuesday', minutes: 56 },
+				{ label: 'Wednesday', minutes: 55 },
+				{ label: 'Thursday', minutes: 57 },
+				{ label: 'Friday', minutes: 72 },
+				{ label: 'Weekend', minutes: 21 }
 			]
 		},
 		{
@@ -79,7 +665,7 @@ const a9: Assessment = {
 		{
 			type: 'cards',
 			items: [
-				{ title: 'Threads to watch', items: ['Monday\'s [[waf|WAF]] rule → Wednesday', 'Tuesday\'s regex "bot fix" → Wednesday', 'Every day → Friday\'s postmortem'] },
+				{ title: 'Threads to watch', items: ['Monday\'s [[waf|WAF]] rule → Wednesday', 'Tuesday\'s regex "bot fix" → Wednesday', 'Monday\'s assistant leak → Friday\'s fix review', 'Thursday\'s CI token → the weekend', 'Every day → Friday\'s postmortem'] },
 				{ title: 'How answers are graded', items: ['Ranked hypotheses with the check that kills each one', 'Mitigate now vs fix properly, separately', 'Who you tell, when, in what words'] },
 				{ title: 'Labs', items: ['Monday and Wednesday have live consoles', 'The clock starts on your first change', 'Each lab has a tempting move that loses'] }
 			]
@@ -90,10 +676,10 @@ const a9: Assessment = {
 		{
 			id: 'mon',
 			nav: 'Mon',
-			eyebrow: 'Monday · 40 minutes',
+			eyebrow: 'Monday · 49 minutes',
 			title: 'Breach before breakfast',
 			meta: 'authorization · bots · sessions',
-			minutes: 40,
+			minutes: 49,
 			questions: [
 				{
 					id: 'mon-idor',
@@ -142,14 +728,14 @@ def get_invoice_pdf(user: User, invoice_id: int):
 					answer: [
 						{
 							type: 'p',
-							text: '**Not caching, and not low priority.** `GET /invoices/{id}` loads by id with no tenant filter: a textbook [[idor|IDOR]]. The list route is scoped, which is why every code review that looked at "the invoices API" passed it. Integer ids make it enumerable by anyone with a login.'
+							text: '**Not *just* caching, and not low priority.** The ticket does not say which URL she edited, and both id routes leak, so the access logs decide which one she hit. If it was the broken PDF URL (`/invoices/4470/pdf`), she got a cross-tenant cache hit (leak 2 below). Either way, `GET /invoices/{id}` loads by id with no tenant filter: a textbook [[idor|IDOR]]. The list route is scoped, which is why every code review that looked at "the invoices API" passed it. Integer ids make it enumerable by anyone with a login.'
 						},
 						{
 							type: 'ranked',
 							items: [
 								{
 									title: 'IDOR on the JSON route (confirmed by reading the code).',
-									body: 'Maya\'s report is exactly the exploit. Invoices contain names, addresses and bank details: this is personal data of another customer\'s clients.',
+									body: 'Whichever route Maya used, this is the exploit anyone with a login can run. Invoices contain names, addresses and bank details: this is personal data of another customer\'s clients.',
 									confirm: 'Access logs: any session that requested an `invoice_id` whose tenant differs from the session\'s tenant, over the full retention window. That query is your exposure list.'
 								},
 								{
@@ -171,11 +757,11 @@ def get_invoice_pdf(user: User, invoice_id: int):
 							type: 'callout',
 							tone: 'crit',
 							title: 'Escalation note (send within the hour)',
-							text: '"**[[severity-triage|SEV1]] (security): cross-tenant data exposure.** Any logged-in user could read any invoice by id (`GET /invoices/{id}`), including client names, addresses and bank details. Reported by a customer at 08:12; hotfix deploying at 09:05. Unknown yet: whether it was exploited before today. I\'m pulling cross-tenant access from logs back to the start of retention (est. 2 h). Needs: security lead and [[data-protection-officer|DPO]] now, because if the logs show third-party access this is a notifiable [[personal-data-breach]] with a regulatory clock (72 h under [[gdpr|GDPR]] from awareness). Do **not** reply to the customer with \'caching issue\'."'
+							text: '"**[[severity-triage|SEV1]] (security): cross-tenant data exposure.** Any logged-in user could read any invoice by id (`GET /invoices/{id}`, and recently viewed PDFs via a path-keyed cache on `/invoices/{id}/pdf`), including client names, addresses and bank details. Reported by a customer at 08:12; hotfix deploying at 09:05. Unknown yet: whether it was exploited before today. I\'m pulling cross-tenant access from logs back to the start of retention (est. 2 h). Needs: security lead and [[data-protection-officer|DPO]] now, because if the logs show third-party access this is a notifiable [[personal-data-breach]] with a regulatory clock (72 h under [[gdpr|GDPR]] from awareness). Do **not** reply to the customer with \'caching issue\'."'
 						},
 						{
 							type: 'p',
-							text: 'Reply to Maya: thank her, confirm you are investigating a **security issue** she found, ask her not to share the invoice she saw and to delete any download, and promise a follow-up. Do not say "caching": it is false and minimizes a breach.'
+							text: 'Reply to Maya: thank her, confirm you are investigating a **security issue** she found, ask her not to share the invoice she saw and to delete any download, and promise a follow-up. Do not say "caching": at best it is half the story, and it minimizes a breach.'
 						}
 					]
 				},
@@ -332,7 +918,8 @@ def get_invoice_pdf(user: User, invoice_id: int):
 							text: '**Ask for:** scope to `/login`, `/signup`, `/password-reset` only; key by IP *and* username for auth routes; start in **count mode** for 24–48 h and review what it would have blocked; exempt authenticated API keys and signed webhooks (verify the signature, then skip IP rules); alert on 403 rate by path and by known partner. Rule of thumb: an emergency [[waf|WAF]] rule gets an owner and an expiry date.'
 						}
 					]
-				}
+				},
+				monRag
 			]
 		},
 
@@ -340,10 +927,10 @@ def get_invoice_pdf(user: User, invoice_id: int):
 		{
 			id: 'tue',
 			nav: 'Tue',
-			eyebrow: 'Tuesday · 40 minutes',
+			eyebrow: 'Tuesday · 56 minutes',
 			title: 'Deploys, URLs and numbers that lie',
 			meta: 'rollback · SSRF · precision · streams · GraphQL',
-			minutes: 40,
+			minutes: 56,
 			questions: [
 				{
 					id: 'tue-rollback',
@@ -378,7 +965,7 @@ def get_invoice_pdf(user: User, invoice_id: int):
 						},
 						{
 							type: 'p',
-							text: '**Now:** find Monday\'s digest (registry history or the old ReplicaSet\'s `imageID` in pod status) and pin it: `kubectl set image deploy/billing-api app=registry/billing-api@sha256:<monday>`. **Then:** deploy by digest from CI (tags are for humans), make `rollout undo` meaningful by never reusing tags, enable tag immutability in the registry. Also check data: 13 minutes of 5xx on the invoice-totals endpoint, so check whether any invoices were written with bad totals during the window.'
+							text: '**Now:** find Monday\'s digest (registry history or the old ReplicaSet\'s `imageID` in pod status) and pin it: `kubectl set image deploy/billing-api app=registry/billing-api@sha256:<monday>`. **Then:** deploy by digest from CI (tags are for humans), make `rollout undo` meaningful by never reusing tags, enable tag immutability in the registry. Also check data: 5xx on the invoice-totals endpoint since the 09:06 sync and still ongoing, so check whether any invoices were written with bad totals during the window.'
 						}
 					]
 				},
@@ -423,7 +1010,7 @@ def fetch_preview(url: str) -> Preview:
 					answer: [
 						{
 							type: 'p',
-							text: '**[[ssrf|SSRF]] via redirect, and the credentials were fetched.** The blocklist checks the first URL\'s text; `requests` then follows a 302 to the [[instance-metadata]] endpoint unchecked. The second request returned 1,310 bytes: that is a full temporary credential document (AccessKeyId, SecretAccessKey, Token). Because the preview falls back to `resp.text[:120]` when there is no `<title>`, part of it may have been rendered back to the researcher.'
+							text: '**[[ssrf|SSRF]] via redirect, and the credentials were fetched.** The blocklist checks the first URL\'s text; `requests` then follows a 302 to the [[instance-metadata]] endpoint unchecked. The second metadata fetch (via `/b`) returned 1,310 bytes: that is a full temporary credential document (AccessKeyId, SecretAccessKey, Token). Because the preview falls back to `resp.text[:120]` when there is no `<title>`, part of it may have been rendered back to the researcher.'
 						},
 						{
 							type: 'ranked',
@@ -481,7 +1068,7 @@ click INV-4475 → GET /api/invoices/1790415528317206500   (404)`
 					answer: [
 						{
 							type: 'p',
-							text: '**[[json-number-precision|JSON number precision]].** The new [[snowflake-id|Snowflake-style]] ids exceed 2^53 (9,007,199,254,740,991), so `JSON.parse` in the browser rounds them to the nearest representable double: three different ids collapse into `…206500`. Server, DB and curl are right; mobile and the old client happen to treat ids as strings (or use a big-int-aware parser).'
+							text: '**[[json-number-precision|JSON number precision]].** The new [[snowflake-id|Snowflake-style]] ids exceed `Number.MAX_SAFE_INTEGER` (2^53 − 1 = 9,007,199,254,740,991), so `JSON.parse` in the browser rounds them to the nearest representable double: three different ids collapse into `…206500`. Server, DB and curl are right; mobile and the old client happen to treat ids as strings (or use a big-int-aware parser).'
 						},
 						{
 							type: 'p',
@@ -535,7 +1122,7 @@ click INV-4475 → GET /api/invoices/1790415528317206500   (404)`
 						},
 						{
 							type: 'p',
-							text: 'Raising the limit to 4 GiB lets this tenant finish (1.5 GB fits) and fails at the next tenant with 10 M rows, or with two concurrent exports. Request rate and CPU are flat: this is not load.'
+							text: 'Raising the limit to 4 GiB lets this tenant finish (1.5 GB fits) and fails at the next tenant with 10 M rows, or with three concurrent exports of this size. Request rate is flat and CPU only steps up modestly (about 22% to 31%) while an export runs: this is not load.'
 						},
 						{
 							type: 'code',
@@ -581,7 +1168,9 @@ app.get("/exports/invoices.csv", async (req, res) => {
 							text: '**1. [[graphql-alias-abuse|Alias abuse]] defeats per-request rate limits:** 500 resolver executions (and with `customer`, likely 500 more queries: [[n-plus-one|N+1]]) count as one request. Limit by computed query cost and alias count, not HTTP requests. **2. It is an enumeration tool:** if the `invoice(id)` resolver has Monday\'s missing tenant check, this request reads 500 invoices at once. The resolvers need the same object-level authorization as REST routes. GraphQL does not inherit the REST fix.'
 						}
 					]
-				}
+				},
+				tueEmbed,
+				tueLock
 			]
 		},
 
@@ -589,10 +1178,10 @@ app.get("/exports/invoices.csv", async (req, res) => {
 		{
 			id: 'wed',
 			nav: 'Wed',
-			eyebrow: 'Wednesday · 45 minutes',
+			eyebrow: 'Wednesday · 55 minutes',
 			title: 'The thing we did on Monday',
 			meta: 'reconciliation · regex · cluster keys · cache lab',
-			minutes: 45,
+			minutes: 55,
 			questions: [
 				{
 					id: 'wed-recon',
@@ -620,13 +1209,13 @@ I assume the payment provider is having an outage? Their status page is green th
 								title: 'Inbound webhooks /payments',
 								range: 'Sun – Wed 09:00',
 								panels: [
-									{ kind: 'bars', title: 'Webhook responses by status (per 6 h)', x: xHook, series: [{ name: '2xx', points: hooks2xx, color: 0 }, { name: '403', points: hooks403, color: 5 }], stacked: true, span: 4 },
+									{ kind: 'bars', title: 'Webhook responses by status (per bucket)', x: xHook, series: [{ name: '2xx', points: hooks2xx, color: 0 }, { name: '403', points: hooks403, color: 5 }], stacked: true, span: 4 },
 									{ kind: 'stat', title: 'Provider retry exhaustion', value: '1,912', delta: 'events dropped after 72 h of retries', tone: 'crit', span: 2 },
 									{
 										kind: 'table',
 										title: '403 responses: top rules',
 										head: ['rule', 'source IPs', 'count'],
-										rows: [['global-rate-limit', '3 (54.187.x.x)', '2,318'], ['block-hosting-asns', '3 (54.187.x.x)', '1,027']],
+										rows: [['global-rate-limit', '3 (54.187.x.x)', '1,871'], ['block-hosting-asns', '3 (54.187.x.x)', '829']],
 										numeric: [2],
 										span: 6
 									}
@@ -701,7 +1290,7 @@ export const isEmail = (s: string) => EMAIL.test(s);`
 					answer: [
 						{
 							type: 'p',
-							text: '**[[redos|ReDoS]], not volume.** Signup traffic is 3/s and flat. Each spike is one core at 100% for 2–4 minutes while the average barely moves, with [[event-loop|event-loop]] lag up to 14.8 s, which freezes *every* route on that pod (all-routes p99 rises in lockstep). `([a-zA-Z0-9]+[._-]?)*` lets the engine split `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa!` in exponentially many ways before failing; one such string per few minutes is enough.'
+							text: '**[[redos|ReDoS]], not volume.** Signup traffic is 3/s and flat. Each spike is one core at 100% for 2–4 minutes while the pod average only climbs from about 20% to 40%, with [[event-loop|event-loop]] lag up to 14.8 s, which freezes *every* route on that pod (all-routes p99 rises in lockstep). `([a-zA-Z0-9]+[._-]?)*` lets the engine split `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa!` in exponentially many ways before failing; one such string per few minutes is enough.'
 						},
 						{
 							type: 'p',
@@ -743,7 +1332,7 @@ profile, prefs = redis.mget(f"profile:{uid}", f"prefs:{uid}")`
 						},
 						{
 							type: 'p',
-							text: 'Two GETs double round trips on a hot path, and anything that needed atomicity (MULTI/EXEC, Lua across both keys) cannot be split that way. **Proper fix:** hash tags, so co-accessed keys share a slot: `{user:{uid}}:profile`, `{user:{uid}}:prefs`. Do not tag too coarsely (`{users}` puts everything on one shard: a [[hot-partition]]). Migrating key names needs a dual-read period or the cache goes cold, which brings the DB fallback in the log into play under full load.'
+							text: 'Two GETs double round trips on a hot path, and anything that needed atomicity (MULTI/EXEC, Lua across both keys) cannot be split that way. **Proper fix:** hash tags, so co-accessed keys share a slot: `{user:<uid>}:profile`, `{user:<uid>}:prefs` (e.g. `{user:88123}:profile`). Do not tag too coarsely (`{users}` puts everything on one shard: a [[hot-partition]]). Migrating key names needs a dual-read period or the cache goes cold, which brings the DB fallback in the log into play under full load.'
 						}
 					]
 				},
@@ -757,7 +1346,7 @@ profile, prefs = redis.mget(f"profile:{uid}", f"prefs:{uid}")`
 					answer: [
 						{
 							type: 'p',
-							text: 'A [[gray-failure]]: [[redis|Redis]] shard 0002 is up and passing health checks, but its single engine thread is pinned by `HGETALL session:bulk:*` (9.8 MB replies), so every command to that shard queues. One third of requests hit that shard and wait the full 5 s client timeout; by [[littles-law|Little\'s law]] 600 workers can then serve only ~350 req/s out of 3,000.'
+							text: 'A [[gray-failure]]: [[redis|Redis]] shard 0002 is up and passing health checks, but its single engine thread is pinned by `HGETALL session:bulk:*` (9.8 MB replies), so every command to that shard queues. One third of requests hit that shard and wait the full 5 s client timeout; by [[littles-law|Little\'s law]] 600 workers can then serve only ~330 req/s out of 3,000.'
 						},
 						{
 							type: 'ranked',
@@ -773,7 +1362,8 @@ profile, prefs = redis.mget(f"profile:{uid}", f"prefs:{uid}")`
 							text: 'Lessons for Friday: "what changed?" is the first question, and flags are changes. A cache client timeout should be a small multiple of the cache\'s normal latency (single-digit ms), never seconds. Big-key commands belong on a replica or in a batch job, not the request-path cluster.'
 						}
 					]
-				}
+				},
+				wedGpu
 			]
 		},
 
@@ -781,10 +1371,10 @@ profile, prefs = redis.mget(f"profile:{uid}", f"prefs:{uid}")`
 		{
 			id: 'thu',
 			nav: 'Thu',
-			eyebrow: 'Thursday · 40 minutes',
+			eyebrow: 'Thursday · 57 minutes',
 			title: 'Quiet failures',
 			meta: 'CSRF · goroutines · secret rotation',
-			minutes: 40,
+			minutes: 57,
 			questions: [
 				{
 					id: 'thu-ssrf-defense',
@@ -936,7 +1526,9 @@ profile, prefs = redis.mget(f"profile:{uid}", f"prefs:{uid}")`
 							text: '**Now:** restart reporting-worker (or its pool) so it reconnects with the current secret. **Properly:** rotate with an overlap, create the new credential, roll it out to every consumer, confirm zero use of the old one, *then* revoke. Lower pool max-lifetime so secret changes propagate in minutes, and add a synthetic connect check per service after any rotation. The lag between cause (01:00) and symptom (08:00) is the signature of connection reuse.'
 						}
 					]
-				}
+				},
+				thuPii,
+				thuCi
 			]
 		},
 
@@ -944,10 +1536,10 @@ profile, prefs = redis.mget(f"profile:{uid}", f"prefs:{uid}")`
 		{
 			id: 'fri',
 			nav: 'Fri',
-			eyebrow: 'Friday · 55 minutes',
+			eyebrow: 'Friday · 72 minutes',
 			title: 'The agent, the fetcher, and the postmortem',
 			meta: 'LLM agent · coding · writing · design',
-			minutes: 55,
+			minutes: 72,
 			questions: [
 				{
 					id: 'fri-agent',
@@ -957,7 +1549,7 @@ profile, prefs = redis.mget(f"profile:{uid}", f"prefs:{uid}")`
 					prompt: [
 						{
 							type: 'p',
-							text: 'Ledgerly ships an [[llm|LLM]] "support copilot" that reads the current ticket and can call tools: `lookup_customer`, `issue_refund(invoice_id, amount)`, `send_email(to, body)`. Overnight it issued a refund on an invoice belonging to a *different* customer and emailed an account summary to an outside address. [[llm-token|Token spend]] also spiked.'
+							text: 'Ledgerly ships an [[llm|LLM]] "support copilot" that reads the current ticket and can call tools: `lookup_customer`, `issue_refund(invoice_id, amount)`, `send_email(to, body)`. On Friday afternoon it issued a refund on an invoice belonging to a *different* customer and emailed an account summary to an outside address. [[llm-token|Token spend]] also spiked.'
 						},
 						{
 							type: 'dashboard',
@@ -1052,7 +1644,7 @@ profile, prefs = redis.mget(f"profile:{uid}", f"prefs:{uid}")`
 						{
 							type: 'code',
 							lang: 'text',
-							code: `POSTMORTEM — week of on-call (blameless)\n\nSummary\nMonday’s credential-stuffing attack was mitigated, but two emergency\nchanges made under pressure caused later incidents: a broad WAF rule\nblocked the payment provider’s webhooks (Wed, €412k unreconciled, overdue\nnotices to paying customers), and a hand-written email regex added to\nblock signup bots caused a ReDoS that froze accounts-api (Wed).\n\nImpact\n- Mon: elevated login latency ~35 min; N accounts taken over (reset).\n- Wed: payments unreconciled Mon–Wed; 1,912 provider events expired after\n  72h of retries and had to be replayed; wrong overdue reminders to ~K customers.\n- Wed: accounts-api p99 > 10s intermittently for ~50 min; signup degraded.\n\nTimeline (abridged)\nMon 08:12 IDOR reported · 08:55 stuffing attack · 09:3x WAF rule approved\nTue \"quick\" regex added to block signup bots\nWed 09:05 finance reports reconciliation gap · 10:20 WAF scoped/fixed\nWed 11:2x ReDoS spikes · 12:xx input length cap + linear check\n\nRoot causes (not people)\n1. Emergency changes had no scoping, owner, or expiry. A rule meant for\n   /login applied to all of api.ledgerly.app, including partner webhooks.\n2. Mitigations weren’t reviewed for blast radius under incident pressure.\n3. User-supplied input hit an unbounded, backtracking regex.\n4. We lacked alerting that would have caught (a) webhook 403s by partner\n   and (b) event-loop lag per pod.\n\nWhat went well\n- Attack fingerprint was read correctly (stuffing, not brute force).\n- The IDOR reporter was believed and the fix prioritized over the PDF bug.\n\nAction items (owner, due, detection-oriented)\n- [ ] Emergency-change policy: scope + owner + expiry; count-mode first. (SRE, 1w)\n- [ ] Alert on webhook non-2xx by partner; synthetic webhook probe. (Platform, 1w)\n- [ ] Alert on event-loop lag and single-core saturation per pod. (Platform, 1w)\n- [ ] Lint for unsafe regex in CI; RE2 for user input. (Backend, 2w)\n- [ ] Signed-webhook bypass for WAF rate rules. (Security, 1w)\n- [ ] Game-day: practice mitigations that don’t page finance. (SRE, 1mo)\n\nNo individual is named. Every action is a system or detection change,\nnot \"be more careful.\"`
+							code: `POSTMORTEM — week of on-call (blameless)\n\nSummary\nMonday’s credential-stuffing attack was mitigated, but two emergency\nchanges made under pressure caused later incidents: a broad WAF rule\nblocked the payment provider’s webhooks (Wed, €412k unreconciled, overdue\nnotices to paying customers), and a hand-written email regex added to\nblock signup bots caused a ReDoS that froze accounts-api (Wed).\n\nImpact\n- Mon: elevated login latency ~35 min; N accounts taken over (reset).\n- Wed: payments unreconciled Mon–Wed; 1,912 provider events expired after\n  72h of retries and had to be replayed; wrong overdue reminders to ~K customers.\n- Wed: accounts-api p99 > 10s intermittently for ~25 min; signup degraded.\n\nTimeline (abridged)\nMon 08:12 IDOR reported · 08:55 stuffing attack · 09:3x WAF rule approved\nTue \"quick\" regex added to block signup bots\nWed 09:05 finance reports reconciliation gap · 10:20 WAF scoped/fixed\nWed 11:3x ReDoS spikes · 12:xx input length cap + linear check\n\nRoot causes (not people)\n1. Emergency changes had no scoping, owner, or expiry. A rule meant for\n   /login applied to all of api.ledgerly.app, including partner webhooks.\n2. Mitigations weren’t reviewed for blast radius under incident pressure.\n3. User-supplied input hit an unbounded, backtracking regex.\n4. We lacked alerting that would have caught (a) webhook 403s by partner\n   and (b) event-loop lag per pod.\n\nWhat went well\n- Attack fingerprint was read correctly (stuffing, not brute force).\n- The IDOR reporter was believed and the fix prioritized over the PDF bug.\n\nAction items (owner, due, detection-oriented)\n- [ ] Emergency-change policy: scope + owner + expiry; count-mode first. (SRE, 1w)\n- [ ] Alert on webhook non-2xx by partner; synthetic webhook probe. (Platform, 1w)\n- [ ] Alert on event-loop lag and single-core saturation per pod. (Platform, 1w)\n- [ ] Lint for unsafe regex in CI; RE2 for user input. (Backend, 2w)\n- [ ] Signed-webhook bypass for WAF rate rules. (Security, 1w)\n- [ ] Game-day: practice mitigations that don’t page finance. (SRE, 1mo)\n\nNo individual is named. Every action is a system or detection change,\nnot \"be more careful.\"`
 						},
 						{ type: 'p', text: 'The grading looks for: causes stated as systems not people, the explicit Monday→Wednesday and Tuesday→Wednesday links, impact quantified with dates, and action items that are detections or guardrails (not "be careful"). "What went well" matters: a blameless culture reinforces good calls too.' }
 					]
@@ -1077,7 +1669,9 @@ profile, prefs = redis.mget(f"profile:{uid}", f"prefs:{uid}")`
 						},
 						{ type: 'p', text: 'The principle: make the safe version the fast version. If adding scope and an expiry is easier than not, people will do it under pressure.' }
 					]
-				}
+				},
+				friWs,
+				friReview
 			]
 		},
 
@@ -1085,10 +1679,10 @@ profile, prefs = redis.mget(f"profile:{uid}", f"prefs:{uid}")`
 		{
 			id: 'weekend',
 			nav: 'Weekend',
-			eyebrow: 'Saturday 03:40 · 15 minutes',
+			eyebrow: 'Saturday 03:40 · 21 minutes',
 			title: 'The weekend page',
 			meta: 'one more, half asleep',
-			minutes: 15,
+			minutes: 21,
 			questions: [
 				{
 					id: 'wknd-sev',
@@ -1130,11 +1724,12 @@ profile, prefs = redis.mget(f"profile:{uid}", f"prefs:{uid}")`
 						{
 							type: 'code',
 							lang: 'text',
-							code: `On-call handoff — watch items\n\n1. WAF: /login rate rules now scoped + signed-webhook exempt. If a partner\n   reports 403s, check edge-acl first. Count-mode rule \"login-asn\" expires Wed.\n2. Refresh-token grace window shipped; reuse-detection alert now split by\n   gap bucket. Real theft = large gap + hosting ASN (don’t silence it).\n3. Link previews: FLAGGED OFF until the safe-fetch rewrite merges (PR #2231).\n   Do not re-enable.\n4. Support copilot: refund/email tools now scoped + approval-gated. Budgets\n   on. If token spend spikes, check for a tool-call loop, not model “slowness”.\n5. reporting-worker pool max-lifetime lowered to 15m after the rotation issue.\n6. Open: IDOR audit of access logs (cross-tenant reads) — results due today;\n   if any third-party reads found, it’s a notifiable breach, loop in DPO.`
+							code: `On-call handoff — watch items\n\n1. WAF: /login rate rules now scoped + signed-webhook exempt. If a partner\n   reports 403s, check edge-acl first. Count-mode rule \"login-asn\" expires Wed.\n2. Refresh-token grace window shipped; reuse-detection alert now split by\n   gap bucket. Real theft = large gap + hosting ASN (don’t silence it).\n3. Link previews: FLAGGED OFF until the safe-fetch rewrite merges (PR #2231).\n   Do not re-enable.\n4. Support copilot: refund/email tools now scoped + approval-gated. Budgets\n   on. If token spend spikes, check for a tool-call loop, not model “slowness”.\n5. reporting-worker pool max-lifetime lowered to 15m after the rotation issue.\n6. Open: IDOR audit of access logs (cross-tenant reads) — results due today;\n   if any third-party reads found, likely a notifiable breach, loop in DPO.`
 						},
 						{ type: 'p', text: 'A good handoff names the landmines, points to where to look first, and flags the one thing that must not be undone (don’t re-enable previews). It is the cheapest reliability tool you have.' }
 					]
-				}
+				},
+				wkndRegistry
 			]
 		}
 	]

@@ -86,3 +86,18 @@ A lab is a deterministic simulation rendered as a cloud or Kubernetes console (`
 ## Mock UI (`mock` block)
 
 A mock screen built from `MockEl` specs (`src/lib/mock/MockScreen.svelte`). With `mode: 'spot'` the reader clicks elements they think are wrong, then checks against planted `issue`s (≥3, validator-enforced) and `decoy`s (look wrong, aren't; explain why). Use `look` to plant visual problems: `faint` (low contrast), `tiny` (small tap target), `color` (colour-only status). The answer should still give the full written critique, ranked by user harm.
+
+## Code review (`diff` block)
+
+A pull request with one or more files (`src/lib/review/`). `patch` is a unified-diff body: lines start with ` `, `+` or `-`; `@@ -12 +12 @@ heading` starts a new hunk. `notes` anchor to the single line containing `match` (validator-enforced) and carry an `issue` with `severity` (`blocker` | `major` | `minor` | `nit`) or a `decoy`. In review mode the reader clicks lines, submits, and sees found / missed / noise.
+
+## Terminal (`terminal` block)
+
+A sandboxed shell over an in-memory filesystem (`src/lib/terminal/`). Reusable anywhere.
+
+- `files`: absolute path → content (parents auto-created). Generate big logs with `genLines(n, i => …)`.
+- Builtins: ls cd pwd cat head tail grep (-i -v -n -c -l -r -E -o -A/-B/-C) wc sort (-n -r -k -t -u -h) uniq (-c -d -u) cut tr awk sed (s///, -n Np, /re/p) find (-name -type -size -maxdepth -exec) tree du df stat file jq base64 sha256sum xargs tee diff column nl seq echo printf env export history … plus pipes, `&&`, `||`, `;`, `>`, `>>`, `<`, `$VAR`, globs.
+- awk subset: `$N`, `$NF`, `NR`, patterns (`/re/`, `$3 > 100`, `$6 ~ /x/`), `print`/`printf`, sums, `count[$1]++` with `END { for (k in count) print k, count[k] }`.
+- jq subset: paths, `.[]`, `select`, `map`, `keys`, `length`, `sort_by`, `group_by`, object construction, `test`, `-r`, `-c`.
+- `commands`: scenario commands (kubectl, psql, dig, aws, docker, systemctl, journalctl, curl…) built with `routes([[/regex/, output | (m, ctx) => output]])`, `table()`, `pgTable()` from `src/lib/terminal/scenario.ts`. Commands may read/write `ctx.state` to model side effects.
+- `answer`: `submit <answer>` checks via `check(answer, state)` (use `oneOf(...)`). `solution` is replayed by the validator: no command may be "not found"/"unsupported", and it must end in a passing submit.

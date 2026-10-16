@@ -93,7 +93,7 @@ const terms: GlossaryTerm[] = [
 		aliases: ['latency cheat sheet', 'numbers everyone should know'],
 		category: 'latency & capacity',
 		short:
-			'Rough orders of magnitude for how long basic operations take: memory is nanoseconds, SSD is tens of microseconds, a network hop inside a datacenter is ~0.5 ms, crossing a continent is ~100 ms. You don\'t need exact values; you need to know which is 1,000× slower than which, so you can tell instantly whether a design is plausible.',
+			'Rough orders of magnitude for how long basic operations take: memory is nanoseconds, SSD is tens of microseconds, a network hop inside a datacenter is ~0.5 ms, a round trip across a continent is ~50–80 ms. You don\'t need exact values; you need to know which is 1,000× slower than which, so you can tell instantly whether a design is plausible.',
 		related: ['request-lifecycle', 'back-of-envelope', 'tail-latency'],
 		page: [
 			{
@@ -349,7 +349,7 @@ const terms: GlossaryTerm[] = [
 			{ type: 'heading', text: 'The hot-key problem, with numbers' },
 			{
 				type: 'p',
-				text: 'A social app shards posts by `author_id` across 10 shards. Average load is 1,000 reads/s per shard. A celebrity with 50 million followers posts, and 40,000 reads/s arrive for that one author. All of them hash to the same shard, which now gets **41×** its normal load while the other nine are idle. Adding shards doesn\'t help: the key still maps to one shard.'
+				text: 'A social app shards posts by `author_id` across 10 shards. Average load is 1,000 reads/s per shard. A celebrity with 50 million followers posts, and 40,000 reads/s arrive for that one author. All of them hash to the same shard, which now gets **41×** its normal load while the other nine stay at ~1,000 reads/s. Adding shards doesn\'t help: the key still maps to one shard.'
 			},
 			{
 				type: 'list',

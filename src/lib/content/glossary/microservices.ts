@@ -55,11 +55,12 @@ const terms: GlossaryTerm[] = [
 # separate relay process (or CDC connector)
 def relay_forever():
     while True:
-        rows = db.fetch("SELECT * FROM outbox WHERE published_at IS NULL "
-                        "ORDER BY created_at LIMIT 100 FOR UPDATE SKIP LOCKED")
-        for r in rows:
-            bus.publish(r.topic, key=r.key, value=r.payload, headers={"event_id": r.id})
-            db.execute("UPDATE outbox SET published_at = now() WHERE id = %s", r.id)`
+        with db.transaction() as tx:   # row locks held until commit
+            rows = tx.fetch("SELECT * FROM outbox WHERE published_at IS NULL "
+                            "ORDER BY created_at LIMIT 100 FOR UPDATE SKIP LOCKED")
+            for r in rows:
+                bus.publish(r.topic, key=r.key, value=r.payload, headers={"event_id": r.id})
+                tx.execute("UPDATE outbox SET published_at = now() WHERE id = %s", r.id)`
 			},
 			{
 				type: 'flow',
@@ -377,7 +378,7 @@ def relay_forever():
 		aliases: ['timeout propagation', 'grpc-timeout'],
 		category: 'distributed systems',
 		short:
-			'Passing the caller\'s remaining time budget down the call chain, so each service knows how long it has left and stops when the original caller has given up. Without it, the gateway times out at 1 s and returns an error, while services underneath keep working for 5 s on a request nobody is waiting for. That wasted work is pure extra load, often doubled because the user retries.',
+			'Passing the caller\'s remaining time budget down the call chain, so each service knows how long it has left and stops when the original caller has given up. Without it, the gateway times out at 1 s and returns an error, while services underneath keep working for nearly 3 s more on a request nobody is waiting for. That wasted work is pure extra load, often doubled because the user retries.',
 		related: ['timeout', 'load-shedding', 'cascading-failure'],
 		page: [
 			{ type: 'heading', text: 'Without propagation' },

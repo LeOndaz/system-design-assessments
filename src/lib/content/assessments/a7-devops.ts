@@ -79,7 +79,7 @@ const k2: Question = {
 	answer: [
 		{
 			type: 'p',
-			text: '**What\'s happening:** `minAvailable: 2` with 2 replicas means `disruptionsAllowed = 0`. The [[eviction|eviction API]] refuses; the drain retries every 5 s until the window closes, and then the provider force-drains, taking both pods at once. Waiting is not neutral: it ends in the worst outcome.'
+			text: '**What\'s happening:** `minAvailable: 2` with 2 replicas means `disruptionsAllowed = 0`. The eviction API refuses; the drain retries every 5 s until the window closes, and then the provider force-drains, taking both pods at once. Waiting is not neutral: it ends in the worst outcome.'
 		},
 		{
 			type: 'table',
@@ -172,7 +172,7 @@ Events:
 				range: '02:00 – 03:00',
 				panels: [
 					ts('Container memory (working set)', kEvictX, [S('ledger-sync', shape(60, { base: 1.1, noise: 0.03, seed: 2, round: 2 }, window_(44, 46, 0.3))), S('limit', Array(60).fill(2), 4, true)], { unit: ' GiB', span: 3 }),
-					ts('Node filesystem used', kEvictX, [S('/var/lib (kubelet + logs)', shape(60, { base: 62, noise: 0.005, seed: 3, round: 1 }, ramp(10, 44, 62, 90.5), window_(44, 46, 63), ramp(46, 60, 63, 75)))], {
+					ts('Node filesystem used', kEvictX, [S('/var/lib (kubelet + logs)', shape(60, { base: 62, noise: 0.005, seed: 3, round: 1 }, ramp(10, 43, 62, 90.5), window_(44, 46, 63), ramp(46, 60, 63, 75)))], {
 						unit: '%',
 						span: 3,
 						thresholds: [{ value: 90, label: 'eviction (10% free)' }],
@@ -187,14 +187,14 @@ Events:
 	answer: [
 		{
 			type: 'p',
-			text: '**Not OOM.** The pod was *evicted* for **ephemeral-storage**: the node\'s disk crossed the 90% eviction threshold, and ledger-sync was the biggest consumer (13 Gi, request 0). Memory sat at ~1.1 GiB of a 2 GiB limit the whole time. Bumping the memory limit changes nothing ([[eviction]] vs [[oomkilled]]).'
+			text: '**Not OOM.** The pod was *evicted* for **ephemeral-storage**: the node\'s disk crossed the 90% eviction threshold, and ledger-sync was the biggest consumer (13 Gi, request 0). Memory sat at ~1.1 GiB of a 2 GiB limit until the eviction. Bumping the memory limit changes nothing ([[eviction]] vs [[oomkilled]]).'
 		},
 		{
 			type: 'ranked',
 			items: [
 				{
 					title: 'Container logs are ephemeral storage.',
-					body: 'From 02:10 the batch logs ~9,200 lines/s to stdout. The kubelet keeps those log files on the node disk, so the filesystem climbs to 90.5% by 02:44, and the kubelet evicts the top consumer ([[ephemeral-storage]]).',
+					body: 'From 02:10 the batch logs ~9,200 lines/s to stdout. The kubelet keeps those log files on the node disk, so the filesystem crosses 90% at 02:43, and at 02:44 the kubelet evicts the top consumer ([[ephemeral-storage]]).',
 					confirm: '`du` under `/var/log/pods/…ledger-sync…` on the node; container log rotation settings (`containerLogMaxSize`).'
 				},
 				{
@@ -260,7 +260,7 @@ cpu=0 ... insert_failed=1834 ...`
 		},
 		{
 			type: 'p',
-			text: 'In-cluster calls are fast because `ledger.payments` resolves on the **first** search domain: one query pair, small chance of a drop.'
+			text: 'In-cluster calls are fast because `ledger.payments` resolves on the **second** search domain (`ledger.payments.svc.cluster.local`, after one fast NXDOMAIN for `ledger.payments.payments.svc.cluster.local`): two query pairs instead of up to ten, so a much smaller chance of a drop.'
 		},
 		{
 			type: 'callout',
@@ -471,7 +471,7 @@ const r2: Question = {
 	prompt: [
 		{
 			type: 'p',
-			text: 'To speed up merges, CI was set to retry failed tests up to 3 times. `test_concurrent_refunds` fails ~8% of first attempts and always passes on retry, so it\'s been marked "flaky, known". This week production issued duplicate refunds for 11 orders.'
+			text: 'To speed up merges, CI was set to re-run failed tests, up to 3 attempts in total. `test_concurrent_refunds` fails ~8% of first attempts and always passes on retry, so it\'s been marked "flaky, known". This week production issued duplicate refunds for 11 orders.'
 		},
 		{
 			type: 'logs',
@@ -578,7 +578,7 @@ const r4: Question = {
 						span: 3,
 						markers: [{ at: 30, label: 'promoted 100%' }]
 					}),
-					ts('Coupon redemptions failing', canX, [S('failures/min', shape(60, { base: 0, noise: 0, seed: 1 }, window_(30, 60, 13), periodic(7, 1, 1, 2)))], { span: 3, markers: [{ at: 30, label: 'promoted' }] }),
+					ts('Coupon redemptions failing', canX, [S('failures/min', shape(60, { base: 0, noise: 0, seed: 1 }, window_(30, 60, 13), periodic(4, 3, 1)))], { span: 3, markers: [{ at: 30, label: 'promoted' }] }),
 					stat('Canary coupon requests (30 min)', '108', { tone: 'warn' }),
 					stat('Canary coupon failures', '23', { tone: 'crit', delta: 'nobody looked at this panel' }),
 					stat('Canary total requests', '36,000'),
@@ -992,7 +992,7 @@ const s2: Question = {
 				['Detect', 'Alert when active subscriptions drop > 1% in 10 minutes.', 'Billing team · Nov 4'],
 				['Mitigate', 'Soft-delete subscriptions (`deleted_at`) so a revert is an UPDATE, not a restore.', 'Billing team · Dec 1'],
 				['Mitigate', 'Quarterly timed restore drill of the subscriptions DB; target [[rto-rpo|RTO]] 30 min, currently 4 h.', 'DBA · first drill Nov 20'],
-				['Process', 'Incident roles (commander, comms) + a status-page template; replaces "improve communication".', 'Eng mgmt · Nov 10']
+				['Mitigate', 'Incident roles (commander, comms) + a status-page template; replaces "improve communication".', 'Eng mgmt · Nov 10']
 			]
 		},
 		{
@@ -1156,7 +1156,7 @@ const teasers: Question[] = [
 		answer: [
 			{
 				type: 'p',
-				text: '**C first** (BestEffort, even though it uses the least), then **B** (Burstable, far over its request), A last (Guaranteed). Usage isn\'t the ranking: QoS class and usage *above request* are ([[qos-class]]).'
+				text: '**B first** (≈1.27Gi over its request), then **C** (BestEffort: 100Mi over a zero request), A last (under its request). Raw usage isn\'t the ranking: the kubelet ranks by whether usage exceeds requests, then priority, then usage *above request*. QoS class itself mainly shapes the kernel OOM killer\'s scores ([[qos-class]]).'
 			}
 		]
 	},
@@ -1184,7 +1184,7 @@ const teasers: Question[] = [
 		title: '99.95% over 30 days',
 		tag: 'teaser',
 		prompt: [{ type: 'p', text: 'How many minutes of full downtime is the error budget?' }],
-		answer: [{ type: 'p', text: '30 × 24 × 60 × 0.0005 = **21.6 minutes**. One slow 25-minute deploy-and-rollback spends more than the whole month ([[error-budget]]).' }]
+		answer: [{ type: 'p', text: '30 × 24 × 60 × 0.0005 = **21.6 minutes**. One slow 25-minute deploy-and-rollback spends more than the whole month\'s budget ([[error-budget]]).' }]
 	},
 	{
 		id: 't5-cronjob-overlap',

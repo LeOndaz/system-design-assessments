@@ -1,0 +1,20 @@
+Copyright (c) 2026 LeOndaz — https://github.com/LeOndaz/system-design-assessments
+
+This repository is dual-licensed for non-commercial use:
+
+  CONTENT — everything under src/lib/content/ and docs/ (assessments,
+  questions, answers, glossary, explainer pages, labs, scenarios):
+    Creative Commons Attribution-NonCommercial 4.0 International
+    (CC BY-NC 4.0). Full text: LICENSE-CONTENT
+    https://creativecommons.org/licenses/by-nc/4.0/
+
+    You may share and adapt the content for non-commercial purposes if you
+    give appropriate credit ("LeOndaz"), link to the repository above and
+    the license, and indicate if changes were made.
+
+  CODE — all other source files:
+    PolyForm Noncommercial License 1.0.0. Full text: LICENSE-CODE
+    https://polyformproject.org/licenses/noncommercial/1.0.0
+
+Commercial use of either part requires prior written permission from the
+copyright holder.

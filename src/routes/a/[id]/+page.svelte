@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { assessments, getAssessment } from '$lib/content';
+	import { assessments, getAssessment, trackIndex, trackOf } from '$lib/content';
 	import { plainText } from '$lib/content/inline';
 	import { assessmentHref } from '$lib/paths';
 	import { progress } from '$lib/state/progress.svelte';
+	import { assessmentMinutes, formatMinutes } from '$lib/content/estimate';
 	import Blocks from '$lib/components/Blocks.svelte';
 	import PartSection from '$lib/components/PartSection.svelte';
 	import Rich from '$lib/components/Rich.svelte';
@@ -36,7 +37,7 @@
 </script>
 
 <svelte:head>
-	<title>{a.number}. {a.title} · Drillbook</title>
+	<title>{a.title} · Drillbook</title>
 	<meta name="description" content={plainText(a.description)} />
 </svelte:head>
 
@@ -52,7 +53,7 @@
 
 <div class="wrap">
 	<header class="hero">
-		<span class="eyebrow">Assessment {a.number} · {a.minutes} minutes · {a.difficulty}</span>
+		<span class="eyebrow">{trackOf(a).short} {trackIndex(a)} · {qids.length} questions · ≈ {formatMinutes(assessmentMinutes(a))} to work through · {a.minutes} min timed · {a.difficulty}</span>
 		<h1>{a.title}</h1>
 		<p class="lede"><Rich text={a.description} /></p>
 		<div class="topics">{#each a.topics as t (t)}<span>{t}</span>{/each}</div>
@@ -75,8 +76,8 @@
 	<div class="end">
 		<button type="button" class="btn" onclick={resetProgress}>Reset progress for this assessment</button>
 		<div class="pn">
-			{#if prev}<a class="btn" href={assessmentHref(prev.id)}>← {prev.number}. {prev.title}</a>{/if}
-			{#if next}<a class="btn primary" href={assessmentHref(next.id)}>{next.number}. {next.title} →</a>{/if}
+			{#if prev}<a class="btn" href={assessmentHref(prev.id)}>← {prev.title}</a>{/if}
+			{#if next}<a class="btn primary" href={assessmentHref(next.id)}>{next.title} →</a>{/if}
 		</div>
 	</div>
 </div>

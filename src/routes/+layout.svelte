@@ -39,6 +39,8 @@
 		</a>
 		<nav aria-label="Main">
 			<a href={href('/')} class:active={page.url.pathname === href('/')}>Assessments</a>
+			<a href={href('/exam')} class:active={isActive('/exam')}>Mock exam</a>
+			<a href={href('/flashcards')} class:active={isActive('/flashcards')}>Flashcards</a>
 			<a href={href('/glossary')} class:active={isActive('/glossary')}>Glossary</a>
 		</nav>
 		<div class="tools">
@@ -62,6 +64,7 @@
 		Model answers reflect common versions of these tasks. Real prompts will differ: read them closely and state your assumptions.
 		Progress is saved in this browser only.
 	</p>
+	<p>© 2026 LeOndaz · content <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noreferrer">CC BY-NC 4.0</a> · code PolyForm Noncommercial 1.0.0 · credit and link back when sharing.</p>
 </footer>
 
 <SearchDialog bind:open={searchOpen} />
@@ -186,9 +189,10 @@
 			gap: 6px;
 		}
 	}
-	@media (max-width: 420px) {
+	@media (max-width: 520px) {
 		nav a {
-			padding: 5px 6px;
+			padding: 5px 5px;
+			font-size: 12px;
 		}
 	}
 </style>

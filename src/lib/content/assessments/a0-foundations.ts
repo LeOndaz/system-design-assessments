@@ -117,7 +117,7 @@ const a0: Assessment = {
 							head: ['Step', 'First visit', 'Refresh'],
 							numeric: [1, 2],
 							rows: [
-								['[[dns|DNS]] lookup (resolver cache miss)', '~40 ms', '0 (cached)'],
+								['[[dns|DNS]] lookup (resolver cache miss, 1–2 upstream lookups)', '~40–80 ms', '0 (cached)'],
 								['[[tcp-handshake|TCP handshake]]', '40 ms (1 [[rtt|RTT]])', '0 (connection kept open)'],
 								['[[tls-handshake|TLS 1.3 handshake]]', '40 ms (1 RTT)', '0 (reused)'],
 								['Request → first byte', '40 ms', '40 ms'],
@@ -524,7 +524,7 @@ const a0: Assessment = {
 					id: 'f-p4q1',
 					title: 'Pick a database for each access pattern',
 					tag: 'core',
-					minutes: 5,
+					minutes: 4,
 					prompt: [
 						{ type: 'p', text: 'For each feature, pick a storage type and say why in one line.' },
 						{
@@ -684,7 +684,7 @@ LIMIT 20;`
 					id: 'f-p4q6',
 					title: 'Adding a fifth shard moved almost everything',
 					tag: 'tricky',
-					minutes: 4,
+					minutes: 3,
 					prompt: [
 						{
 							type: 'p',
@@ -712,7 +712,7 @@ LIMIT 20;`
 					id: 'f-p4q7',
 					title: 'CAP in practice: likes vs tickets',
 					tag: 'core',
-					minutes: 4,
+					minutes: 3,
 					prompt: [
 						{
 							type: 'p',
@@ -991,7 +991,7 @@ def update_price(pid, price):
 						},
 						{
 							type: 'p',
-							text: 'Make the handler [[idempotency|idempotent]]: record "welcome email sent for user 42" (a unique row keyed by `message_id` or `user_id + email_type`) and skip if it already exists. The general rule: **assume every message can arrive twice**, and design so twice has the same effect as once. See [[idempotent-consumer]].'
+							text: 'Make the handler [[idempotency|idempotent]]: record "welcome email sent for user 42" (a unique row keyed by `message_id` or `user_id + email_type`) and skip if it already exists. Because an email send can\'t join a database transaction, a crash between sending and writing that row can still cause a rare duplicate; close the gap by passing `message_id` as the email provider\'s idempotency key if it supports one. The general rule: **assume every message can arrive twice**, and design so twice has the same effect as once. See [[idempotent-consumer]].'
 						}
 					]
 				},
@@ -1544,7 +1544,7 @@ links(code PRIMARY KEY, long_url, owner_id, created_at, expires_at)`
 							type: 'list',
 							items: [
 								'**Store presence in memory with a [[ttl]]:** `SET online:{user} 1 EX 90`, refreshed by heartbeats. A user who stops heartbeating expires on their own, so no "went offline" event is needed for crashes or dead phone batteries.',
-								'**Heartbeat less, tolerate misses:** every 60 s with a 90 s TTL halves the writes to ~167,000/s and survives one lost heartbeat. Many systems refresh only on the gateway (which already knows the socket is open), not from every client.',
+								'**Heartbeat less, tolerate misses:** every 60 s with a 90 s TTL halves the writes to ~167,000/s and tolerates a heartbeat that arrives up to 30 s late. Surviving a fully lost heartbeat would need a TTL longer than two intervals (e.g. ~130 s), which trades against the one-minute target. Many systems refresh only on the gateway (which already knows the socket is open), not from every client.',
 								'**Push changes, don\'t poll:** when a user flips online↔offline, publish an event to the gateways holding their contacts\' connections. Only *changes* travel, which are far rarer than heartbeats.',
 								'**Accept fuzziness:** presence is a classic [[eventual-consistency|eventually consistent]] feature. A dot that is 30 s late is fine; don\'t spend strong-consistency money on it.'
 							]
@@ -1699,7 +1699,7 @@ links(code PRIMARY KEY, long_url, owner_id, created_at, expires_at)`
 					answer: [
 						{
 							type: 'p',
-							text: 'The copies aren\'t **independent**. One zone outage takes everything down at once, and so does one bad deploy pushed to all 12 servers at the same moment. [[redundancy]] only helps when failures are uncorrelated: spread across [[availability-zone|zones]] and deploy gradually (one server or a small percentage first, then the rest) so a bad release hits a few servers, not all of them. See [[blue-green-deployment]].'
+							text: 'The copies aren\'t **independent**. One zone outage takes everything down at once, and so does one bad deploy pushed to all 12 servers at the same moment. [[redundancy]] only helps when failures are uncorrelated: spread across [[availability-zone|zones]] and deploy gradually (one server or a small percentage first, then the rest) so a bad release hits a few servers, not all of them. See [[canary-analysis|canary rollouts]].'
 						}
 					]
 				},

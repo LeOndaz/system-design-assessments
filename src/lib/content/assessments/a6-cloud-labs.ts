@@ -140,7 +140,7 @@ const a6: Assessment = {
 							items: [
 								{
 									title: 'One capacity pool means one correlated failure.',
-									body: 'The fleet is a single [[capacity-pool|spot pool]]. When it is reclaimed, the ASG keeps asking the same empty pool and logs `InsufficientInstanceCapacity`, so capacity stays at ~14 of 40 and errors sit around 65%.',
+									body: 'The fleet uses a single instance type, so its [[capacity-pool|spot pools]] (c6i.xlarge in each AZ) are reclaimed together. When that happens, the ASG keeps asking the same empty pool and logs `InsufficientInstanceCapacity`, so capacity drops to ~14 of 40 (errors ~65%) and keeps sliding as the pool drains further.',
 									confirm: 'ASG details: *Last activity* and *Allocation: lowest-price*.'
 								},
 								{
@@ -457,7 +457,7 @@ const a6: Assessment = {
 							items: [
 								{ title: 'Delete the session files to restore service now.', body: '`find … -mmin +10 -delete` frees inodes at ~30k/s. Errors stop within seconds of the first inodes freeing up.' },
 								{
-									title: 'Stop the creation or you will be back in four minutes.',
+									title: 'Stop the creation or you will be back in about five minutes.',
 									body: 'Rate-limit the crawler at the WAF (the details name it: `SEOCrawler/2.1`, 41 IPs) **or** move sessions to Redis. Moving to Redis alone stops new files but leaves the 3.9M old ones in place: you still need the cleanup.'
 								}
 							]
@@ -466,7 +466,7 @@ const a6: Assessment = {
 							type: 'callout',
 							tone: 'warn',
 							title: 'The two traps',
-							text: '**Growing the [[ebs|EBS]] volume** changes the block device, not the filesystem: until `growpart` + `resize2fs` run, `df` doesn\'t move ([[filesystem-resize]]); and even then the bot refills it. **Deleting /var/log/*.gz** frees 41 GB of bytes and zero inodes. Both look productive in a status update.'
+							text: '**Growing the [[ebs|EBS]] volume** changes the block device, not the filesystem: until `growpart` + `resize2fs` run, `df` doesn\'t move ([[filesystem-resize]]); and even then the bot refills it. **Deleting /var/log/*.gz** frees 41 GB of bytes and only a few hundred inodes. Both look productive in a status update.'
 						},
 						{
 							type: 'p',
@@ -532,13 +532,13 @@ const a6: Assessment = {
 				},
 				{
 					id: 'cross-az-mesh',
-					title: 'Compute flat, bill up 38%',
+					title: 'Compute flat, bill up 32%',
 					tag: 'tricky',
 					minutes: 8,
 					prompt: [
 						{
 							type: 'p',
-							text: 'Finance flags that the platform bill rose 38% in the second half of September. The team insists "nothing big shipped". You pull daily cost by usage type.'
+							text: 'Finance flags that the platform bill rose 32% in the first half of October. The team insists "nothing big shipped". You pull daily cost by usage type.'
 						},
 						{
 							type: 'dashboard',
@@ -597,7 +597,7 @@ const a6: Assessment = {
 					answer: [
 						{
 							type: 'p',
-							text: '`DataTransfer-Regional-Bytes` jumps from ~$120/day to ~$1,150/day on Oct 2, exactly at the mesh 1.4 rollout marker; inter-AZ bytes go up ~10×. Requests and instance-hours are flat, so this is not growth. The leading hypothesis: the mesh upgrade changed load balancing from **zone-aware (locality) routing to plain [[round-robin|round-robin]]**, so ~2/3 of calls now cross AZs instead of staying local, and every byte is billed both ways ([[cross-az-transfer]]).'
+							text: '`DataTransfer-Regional-Bytes` jumps from ~$120/day to ~$1,150/day on Oct 2, exactly at the mesh 1.4 rollout marker; inter-AZ bytes go up ~9× (orders ↔ inventory alone ~10×). Requests and instance-hours are flat, so this is not growth. The leading hypothesis: the mesh upgrade changed load balancing from **zone-aware (locality) routing to plain [[round-robin|round-robin]]**, so ~2/3 of calls now cross AZs instead of staying local, and every byte is billed both ways ([[cross-az-transfer]]).'
 						},
 						{
 							type: 'list',
@@ -668,7 +668,7 @@ Plan: 2 to add, 0 to change, 2 to destroy.`
 							items: [
 								{
 									title: 'Add a [[moved-block|`moved` block]] for the DB (and the security group).',
-									body: '`moved { from = aws_db_instance.orders  to = module.orders_db.aws_db_instance.this }`. The plan should then show `0 to destroy` and an in-place `~ engine_version`.'
+									body: '`moved { from = aws_db_instance.orders  to = module.orders_db.aws_db_instance.this }`. Also keep the SG name unchanged (`"orders-db"`), because a `moved` block fixes addresses, not a forced rename. The plan should then show `0 to destroy` and an in-place `~ engine_version`.'
 								},
 								{
 									title: 'Separate the refactor from the engine upgrade.',
@@ -763,7 +763,7 @@ Lock Info:
 							items: [
 								'**Boundary edit:** irrelevant; `PutObject` was already in the boundary. Widening it to `s3:*` only expands blast radius.',
 								'**SCP:** irrelevant; eu-west-1 is allowed.',
-								'**Fix:** send `x-amz-server-side-encryption: aws:kms` (and the key id), *and* make sure the role is allowed to `kms:GenerateDataKey` on that key; otherwise you trade an S3 AccessDenied for a KMS one. Alternatively set default bucket encryption to SSE-KMS and relax the bucket policy accordingly.',
+								'**Fix:** send `x-amz-server-side-encryption: aws:kms` (and the key id), *and* make sure the role is allowed to `kms:GenerateDataKey` on that key, in its identity policy (or the key policy) **and** in the permission boundary, which today allows only three S3 actions; otherwise you trade an S3 AccessDenied for a KMS one. Alternatively set default bucket encryption to SSE-KMS and relax the bucket policy accordingly.',
 								'**Read the error.** Modern AccessDenied messages say *"…with an explicit deny in a [[resource-based-policy|resource-based policy]]"*. That one sentence saves the hour.'
 							]
 						}
@@ -791,7 +791,7 @@ Lock Info:
 							items: [
 								{
 									title: 'RPO is probably met; RTO almost certainly isn\'t.',
-									body: 'Continuous WAL archiving gives point-in-time recovery to within minutes ([[rto-rpo|RPO]] ✓, if archiving lag is monitored). But a restore is snapshot + WAL replay from 02:00 until the failure: up to ~20 h of WAL to replay. Plus lazy-loaded blocks make the first full scan (and every index used) run at a fraction of normal speed for hours.'
+									body: 'Continuous WAL archiving gives point-in-time recovery to within minutes ([[rto-rpo|RPO]] ✓, if archiving lag is monitored). But a restore is snapshot + WAL replay from 02:00 until the failure: up to ~24 h of WAL to replay. Plus lazy-loaded blocks make the first full scan (and every index used) run at a fraction of normal speed for hours.'
 								},
 								{
 									title: 'Measure it, don\'t estimate it.',

@@ -82,7 +82,7 @@ export const recon: Part = {
 		},
 		{
 			id: 'r2',
-			title: 'Breaks every day, and five times worse for one week',
+			title: 'Breaks every day, and far worse for one week',
 			tag: 'tricky',
 			minutes: 6,
 			prompt: [
@@ -263,7 +263,7 @@ def match(entry):                     # entry parsed from the bank statement
 				},
 				{
 					type: 'p',
-					text: 'The model predicts both observed rates (0.67% → 0.93%) exactly: the **€5,200/month** increase is the customer mix (commercial and non-EEA cards, which carry 7.5× the interchange of domestic debit), not overbilling. Every individual rate is unchanged; the average moved because the weights did, the same structure as [[simpsons-paradox|Simpson\'s paradox]].'
+					text: 'The model predicts both observed rates (0.67% → 0.93%) exactly: the **€5,200/month** increase is the customer mix (commercial and non-EEA cards, which carry 7.5× the interchange of domestic debit), not overbilling. Every individual rate is unchanged; the average moved because the weights did. That is a mix effect, the same mechanism that drives [[simpsons-paradox|Simpson\'s paradox]].'
 				},
 				{
 					type: 'p',

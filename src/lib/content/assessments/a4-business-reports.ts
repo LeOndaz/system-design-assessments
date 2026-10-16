@@ -105,7 +105,7 @@ const assessment: Assessment = {
 			type: 'callout',
 			tone: 'warn',
 			title: 'What graders look for',
-			text: 'Triage by impact, not by who is shouting. In this assessment the scariest-sounding report (the CEO\'s) is the least severe, and a calm one-line customer email is the most severe. Saying that out loud, with reasons, is the point. See [[severity-triage]].'
+			text: 'Triage by impact, not by who is shouting. In this assessment the scariest-sounding report (the CEO\'s) is only a SEV3, and a calm one-line customer email is the most severe. Saying that out loud, with reasons, is the point. See [[severity-triage]].'
 		}
 	],
 	parts: [
@@ -163,7 +163,7 @@ const assessment: Assessment = {
 						{ type: 'p', text: 'Refunds issued last week, per the provider: **$730**.' }
 					],
 					hints: [
-						'Look at the signs of the daily differences. What does it mean that they alternate?',
+						'Look at the signs of the daily differences. What does it mean that they go both ways and nearly cancel over the week?',
 						'Compare the weekly difference with the refunds line.'
 					],
 					answer: [
@@ -176,7 +176,7 @@ const assessment: Assessment = {
 							items: [
 								{
 									title: 'Different [[day-boundary|day boundaries]]: our SQL groups by [[utc|UTC]] date, the provider by Los Angeles date.',
-									body: 'The daily differences alternate in sign and mostly cancel over the week. Money isn\'t missing, it\'s moving between neighbouring days. UTC midnight is 17:00 in LA, so Monday-evening US sales count as Tuesday on our side.',
+									body: 'The daily differences swing both ways and mostly cancel over the week. Money isn\'t missing, it\'s moving between neighbouring days. UTC midnight is 17:00 in LA, so Monday-evening US sales count as Tuesday on our side.',
 									confirm: 'Re-run the query grouped by `(created_at AT TIME ZONE \'America/Los_Angeles\')::date`. Daily rows should then match to within refunds.'
 								},
 								{
@@ -218,7 +218,7 @@ const assessment: Assessment = {
 								from: 'Daniel Okafor',
 								role: 'CFO',
 								subject: 'URGENT: October MRR',
-								time: 'Wed Oct 1, 07:02',
+								time: 'Thu Oct 1, 07:02',
 								body:
 									"The automated MRR report this morning shows $412k. September was $588k. That's a 30% drop in one night. The same thing happened in July and it \"fixed itself\" a day later, which nobody could explain.\n\nI have an investor call at 11. I need to know whether this number is real."
 							}
@@ -272,11 +272,11 @@ const assessment: Assessment = {
 										numeric: [1, 4],
 										highlight: [2, 5],
 										rows: [
-											['May', '4,100', '00:13', '00:15', '$541k'],
-											['Jun', '4,600', '00:14', '00:15', '$556k'],
+											['May', '1,600', '00:13', '00:15', '$541k'],
+											['Jun', '1,800', '00:14', '00:15', '$556k'],
 											['Jul', '6,900', '00:39', '00:15', '$398k'],
-											['Aug', '5,200', '00:15', '00:15', '$571k'],
-											['Sep', '5,600', '00:14', '00:15', '$588k'],
+											['Aug', '2,000', '00:15', '00:15', '$571k'],
+											['Sep', '1,800', '00:14', '00:15', '$588k'],
 											['Oct', '8,300', '00:46', '00:15', '$412k']
 										]
 									}
@@ -368,8 +368,8 @@ for sub in Subscription.where(status="trialing", trial_end__lte=date.today()):
 							items: [
 								{
 									title: 'Trial dates are computed from the [[utc]] calendar date, not the customer\'s.',
-									body: 'A Sydney customer signs up Oct 1 at 08:00 local = **Sep 30** 22:00 UTC. `trial_end` = Sep 30 + 14 = Oct 14. The worker charges at Oct 14 00:05 UTC = Oct 14 10:05 in Sydney, on the morning of their 14th local day. A Los Angeles customer signing up Oct 1 at 20:00 local is already Oct 2 in UTC, so they get an *extra* half day and never complain. Who\'s affected is the clue.',
-									confirm: 'Query trial charges where `charged_at` is earlier than `signup_at + 14 days`. They will cluster in UTC+8…+13.'
+									body: 'A Sydney customer signs up Oct 1 at 08:00 local = **Sep 30** 22:00 UTC. `trial_end` = Sep 30 + 14 = Oct 14. The worker charges at Oct 14 00:05 UTC = Oct 14 10:05 in Sydney, on the morning of their 14th local day. Everyone is actually charged early, by however far into the UTC day they signed up. But 00:05 UTC is 17:05 the *previous evening* in Los Angeles, so US customers are billed late on day 14 (or on day 15 if they signed up after 17:00 local) and rarely notice. Sydney customers see the charge on the morning of day 14. Who\'s affected is the clue.',
+									confirm: 'Query trial charges where `charged_at` is earlier than `signup_at + 14 days`: almost all of them are, in every timezone. The ones charged in the *local morning* of day 14 cluster in UTC+8…+13.'
 								},
 								{
 									title: '[[off-by-one]] in the definition of "14 days".',
@@ -383,7 +383,7 @@ for sub in Subscription.where(status="trialing", trial_end__lte=date.today()):
 						},
 						reply(
 							'Mia',
-							"Hi Mia, the trial isn't shorter in Australia on purpose. It's a bug in how we counted the days, and you're right that it mostly hits Australia and Asia.\n\nOur system worked out the trial end date using international time (UTC) instead of the customer's own time, so people in Australia who signed up in the morning were charged a few hours before their trial was really over.\n\nWe're fixing it today so every trial lasts exactly 14 × 24 hours. I'm also pulling a list of everyone it affected. Anyone who had cancelled gets a full refund. Please tell the angry customer their refund is being processed today."
+							"Hi Mia, the trial isn't shorter in Australia on purpose. It's a bug in how we counted the days, and you're right that it mostly hits Australia and Asia.\n\nOur system worked out the trial end date using international time (UTC) instead of the customer's own time, so people in Australia who signed up in the morning were charged up to almost a full day before their trial was really over.\n\nWe're fixing it today so every trial lasts exactly 14 × 24 hours. I'm also pulling a list of everyone it affected. Anyone who had cancelled gets a full refund. Please tell the angry customer their refund is being processed today."
 						)
 					]
 				},
@@ -638,7 +638,7 @@ return round(total / 100, 2)`
 					answer: [
 						{
 							type: 'p',
-							text: '**The tempting answer** is Priya\'s: fraud, turn on stricter checks. The table says otherwise: "Fraudulent" is flat, and the entire increase is "Unrecognized", starting the week of the rebrand.'
+							text: '**The tempting answer** is Priya\'s: fraud, turn on stricter checks. The table says otherwise: "Fraudulent" is flat, and the entire increase is "Unrecognized", starting the week right after the Sep 14 rebrand.'
 						},
 						{
 							type: 'ranked',
@@ -869,7 +869,7 @@ age: 212`
 						},
 						reply(
 							'the customer',
-							"Hi, thank you for telling us. It was important and we acted on it straight away.\n\nA change we made on Thursday caused some account pages to be temporarily stored and shown to the wrong person. We fixed it within an hour of your message. Your account and password weren't changed, and nobody could make changes to your account.\n\nWe're now checking exactly whose details were shown to whom. If your information was shown to anyone else, we'll contact you directly. Sorry for the worry, and thanks again for reporting it."
+							"Hi, thank you for telling us. It was important and we acted on it straight away.\n\nA change we made on Thursday caused some account pages to be temporarily stored and shown to the wrong person. We've stopped it from happening.\n\nWe're now checking exactly whose details were shown to whom. If your information was shown to anyone else, we'll contact you directly. Sorry for the worry, and thanks again for reporting it."
 						),
 						{
 							type: 'p',
@@ -989,8 +989,8 @@ except CarrierError as e:
 							items: [
 								{
 									title: 'The carrier API accepts only [[character-encoding|Latin-1]] and max 35 characters; we send the raw Unicode name.',
-									body: '"Foreign names" is really "names with characters outside the carrier\'s character set". Interesting detail: "José Martínez" *is* valid Latin-1, but it was rejected. That name was probably stored in decomposed form (`e` + combining accent) from a macOS form submission. See [[unicode-normalization]].',
-									confirm: 'Print `repr()` / code points of the rejected names; the José one will contain `U+0301`.'
+									body: '"Foreign names" is really "names with characters outside the carrier\'s character set". Interesting detail: "José Martínez" and "Zoë Ångström" *are* valid Latin-1, but they were rejected. Those names were probably stored in decomposed form (`e` + combining accent) from a macOS form submission. See [[unicode-normalization]].',
+									confirm: 'Print `repr()` / code points of the rejected names; the José one will contain `U+0301` and the Zoë one `U+0308` / `U+030A`.'
 								},
 								{
 									title: 'The failure is invisible: warning log, no alert, retry tonight forever.',
@@ -1334,7 +1334,7 @@ app.example.com.   281     IN  A   198.51.100.24     ← new load balancer`
 						},
 						reply(
 							'Lena',
-							"Hi Lena, sorry about the lost demos. It's not the sales team: demo usage is actually highest in your mornings, when it's fast.\n\nThe demo site shares a database with our testing environment. Every afternoon your time, the US testing team starts their automated tests (it's their morning) and they slow the shared database down a lot.\n\nFrom tomorrow the tests run on a separate copy, so afternoons should be as fast as mornings. Next week the demo site gets its own database for good. Ping me straight away if a demo is slow after tomorrow."
+							"Hi Lena, sorry about the lost demos. It's not the sales team: demo usage is just as high in your mornings, when it's fast, as in your afternoons.\n\nThe demo site shares a database with our testing environment. Every afternoon your time, the US testing team starts their automated tests (it's their morning) and they slow the shared database down a lot.\n\nFrom tomorrow the tests run on a separate copy, so afternoons should be as fast as mornings. Next week the demo site gets its own database for good. Ping me straight away if a demo is slow after tomorrow."
 						)
 					]
 				},
@@ -1370,7 +1370,7 @@ app.example.com.   281     IN  A   198.51.100.24     ← new load balancer`
 					answer: [
 						{
 							type: 'p',
-							text: '**Cause:** check-then-act [[race-condition]] → [[oversell]]. Two requests both read `1`, both pass the check, both write `0`, and both create an order. The "write the value I computed" form also [[lost-update|loses updates]], so stock can go negative once a later restock or adjustment subtracts from a wrong base. It only shows under flash-sale concurrency.'
+							text: '**Cause:** check-then-act [[race-condition]] → [[oversell]]. Two requests both read `1`, both pass the check, both write `0`, and both create an order. The "write the value I computed" form also [[lost-update|loses updates]]: concurrent decrements overwrite each other, so the stored count stays too high and the site keeps selling past 200. This code never writes a value below 0. The -3 appears once stock is reconciled against real orders (200 − 203). It only shows under flash-sale concurrency.'
 						},
 						{
 							type: 'code',
@@ -1428,7 +1428,7 @@ RETURNING qty_available;`
 							items: [
 								{
 									title: 'The event is over-counted in B: it fires on every view of the confirmation page.',
-									body: 'B has 2,512 events but only 1,795 orders: 1.4 events per order, vs ~1.0 in A. Refreshes, back-button and re-opened tabs each fire `onMount` again. Measured by **orders**, conversion is A 3.99% vs B 4.00%. No difference.',
+									body: 'B has 2,512 events but only 1,795 orders: 1.4 events per order, vs ~1.0 in A. Refreshes, back-button and re-opened tabs each fire `onMount` again. Measured by **orders**, conversion is A 3.99% vs B 4.00%. No difference. Revenue per assigned user is flat too ($3.20 vs $3.21), which is what finance is seeing; raw totals differ only because B has fewer users.',
 									confirm: 'Count distinct `order_id` per event in B.'
 								},
 								{
@@ -1654,7 +1654,7 @@ What we know
 - From Thu 17:40 to Fri 15:20, logged-in account pages could be
   cached by our CDN and shown to other users for up to 5 minutes.
 - Data visible on that page: name, email, shipping address, last 5 orders.
-  No passwords or card numbers are on that page.
+  No passwords or card numbers are on that page (checked against the page template).
 
 What we don't know yet
 - How many users saw another user's page. CDN logs preserved; estimate by 18:00.
@@ -1711,7 +1711,7 @@ Next update: 09:15.`
 			questions: [
 				{
 					id: 't1',
-					title: 'Weekly totals match, daily totals don\'t',
+					title: 'Monthly totals match, daily totals don\'t',
 					tag: 'teaser',
 					prompt: [{ type: 'p', text: 'Two revenue reports agree over a month but differ day to day, with alternating signs. Most likely cause?' }],
 					answer: [{ type: 'p', text: 'Different [[day-boundary|day boundaries]] (timezones). Missing data makes one side *consistently* lower; alternating signs mean money is moving between days.' }]

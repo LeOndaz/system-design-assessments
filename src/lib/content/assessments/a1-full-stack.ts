@@ -401,7 +401,7 @@ const a1: Assessment = {
 					type: 'callout',
 					tone: 'info',
 					title: 'A 25-minute workflow',
-					text: '**3 min:** restate the ticket as a testable claim ("contacts created after the 100th are missing from sync"). **8 min:** trace the data path: entry point → service → API client → mapper → DB write. Use AI to summarize files, but read the suspicious function yourself. **4 min:** prove it. Point at the line, explain the mechanism, show which input triggers it. **10 min:** write both notes. Keep the engineer note tight. Keep the non-tech note to five sentences.'
+					text: '**3 min:** restate the ticket as a testable claim ("contacts created after the 100th are missing from sync"). **8 min:** trace the data path: entry point → service → API client → mapper → DB write. Use AI to summarize files, but read the suspicious function yourself. **4 min:** prove it. Point at the line, explain the mechanism, show which input triggers it. **10 min:** write both notes. Keep the engineer note tight. Keep the non-tech note to a few short, jargon-free paragraphs: who, what now, when, what to say.'
 				},
 				{
 					type: 'callout',

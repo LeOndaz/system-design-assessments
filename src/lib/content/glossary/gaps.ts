@@ -598,7 +598,7 @@ const terms: GlossaryTerm[] = [
 			{
 				type: 'callout',
 				tone: 'info',
-				text: 'Worked example: at 80 ms RTT, a new HTTPS connection costs ~3 RTT = 240 ms before the request is even sent. Reusing one connection for 50 requests saves ~12 s of handshakes.'
+				text: 'Worked example: at 80 ms RTT, a new HTTPS connection over TLS 1.2 costs ~3 RTT (1 TCP + 2 TLS) = 240 ms before the request is even sent (TLS 1.3: ~2 RTT = 160 ms). Reusing one connection for 50 requests saves ~12 s of handshakes (~8 s with TLS 1.3).'
 			}
 		]
 	},

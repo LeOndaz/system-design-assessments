@@ -98,7 +98,7 @@ Are we charging people twice or is this the bank's problem? Can I tell them the 
 				},
 				{
 					type: 'p',
-					text: '**Mitigate now:** stop mapping timeouts to `card_declined`: return "we\'re confirming your payment" and poll. Run a script that finds today\'s timed-out attempts that PSP-A authorized and sends reversals (the holds disappear in hours, not days). **Fix properly:** key per payment intent; a `pending_unknown` state that only the PSP\'s answer can resolve; webhooks may move an attempt out of `pending_unknown` but never get ignored silently; an alert on "authorized at PSP, failed locally".'
+					text: '**Mitigate now:** stop mapping timeouts to `card_declined`: return "we\'re confirming your payment" and poll. Run a script that finds today\'s timed-out attempts that PSP-A authorized and sends reversals (the holds clear within 1–3 days instead of sitting there until they expire after ~7). **Fix properly:** key per payment intent; a `pending_unknown` state that only the PSP\'s answer can resolve; webhooks may move an attempt out of `pending_unknown` but never get ignored silently; an alert on "authorized at PSP, failed locally".'
 				},
 				{
 					type: 'ticket',
@@ -368,14 +368,14 @@ def on_webhook(evt):
 			answer: [
 				{
 					type: 'p',
-					text: '**Red herring:** PSP latency. Its bump is 12:30–14:15, two hours after the change, and small (+70 ms on 390).'
+					text: '**Red herring:** PSP latency. Its bump is 12:30–14:15, two and a half hours after the change, and small (+70 ms on 390).'
 				},
 				{
 					type: 'ranked',
 					items: [
 						{
 							title: 'Issuer C reads the rapid retries as [[card-testing|card testing]].',
-							body: 'Attempts per order jump from 1.03 to 1.31 exactly at the marker. Issuer C\'s `do_not_honor` doubles immediately (retries of soft declines decline again), and then `suspected_fraud` climbs from ~0.4% to ~9% over the next 90 minutes as its risk models learn the pattern: identical amount, same card, three attempts in three seconds. Now *first* attempts from good customers are declined too. Approval falls 91% → 74%.',
+							body: 'Attempts per order jump from 1.03 to 1.31 exactly at the marker. Issuer C\'s `do_not_honor` doubles immediately (retries of soft declines decline again), and then `suspected_fraud` climbs from ~0.4% to ~9% over the next two hours as its risk models learn the pattern: identical amount, same card, three attempts in three seconds. Now *first* attempts from good customers are declined too. Approval falls 91% → 74%.',
 							confirm: 'Approval rate of **first** attempts only at Issuer C, before vs after 10:00. If first attempts fell, the retries poisoned the merchant\'s reputation at that issuer, not just their own outcome.'
 						},
 						{

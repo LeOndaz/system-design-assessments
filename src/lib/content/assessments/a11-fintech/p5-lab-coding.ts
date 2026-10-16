@@ -36,7 +36,7 @@ export const lab: Part = {
 					items: [
 						{
 							title: 'The trap: 100% to PSP-B immediately.',
-							body: 'Every in-flight PSP-A attempt is re-driven to PSP-B. About 30% of PSP-A timeouts were actually captured, so ~140 customers are charged twice within seconds. Even with dedupe on, a jump from 0 to 100 tx/s against 30 tx/s of headroom puts us into PSP-B\'s manual risk review, freezing our ramp for five minutes while approvals sit near 28%.'
+							body: 'Every in-flight PSP-A attempt is re-driven to PSP-B. About 30% of those ~470 in-flight attempts will in fact capture at PSP-A, so ~140 customers are charged twice within seconds. Even with dedupe on, a jump from 0 to 100 tx/s against 30 tx/s of headroom puts us into PSP-B\'s manual risk review, freezing our ramp for five minutes while approvals sit near 28%.'
 						},
 						{
 							title: 'Step 1: turn on cross-PSP dedupe first.',
@@ -167,7 +167,7 @@ def schedule(principal: int, annual_bps: int, months: int) -> list[Row]:
 				},
 				{
 					type: 'p',
-					text: '**Why the payment formula is exact:** with (1 + r) = a ÷ 120000, the formula P·r·(1+r)ⁿ ÷ ((1+r)ⁿ − 1) becomes P·bps·aⁿ ÷ (120000·(aⁿ − 120000ⁿ)), a ratio of integers. Python integers are unbounded, so the only rounding is the one you choose. O(n) time; aⁿ for 360 months is a ~2,000-digit integer, computed once.'
+					text: '**Why the payment formula is exact:** with (1 + r) = a ÷ 120000, the formula P·r·(1+r)ⁿ ÷ ((1+r)ⁿ − 1) becomes P·bps·aⁿ ÷ (120000·(aⁿ − 120000ⁿ)), a ratio of integers. Python integers are unbounded, so the only rounding is the one you choose. O(n) time; aⁿ for 360 months is a ~1,800-digit integer, computed once.'
 				}
 			]
 		},

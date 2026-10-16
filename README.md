@@ -37,3 +37,12 @@ src/routes/            /, /a/[id]/, /glossary/, /glossary/[id]/
 ```
 
 Adding an assessment means adding one file to `src/lib/content/assessments/`. No UI changes needed.
+
+## License
+
+Non-commercial, attribution required.
+
+- **Content** (`src/lib/content/`, `docs/`): [CC BY-NC 4.0](LICENSE-CONTENT). Share and adapt for non-commercial use with credit to **LeOndaz** and a link back.
+- **Code**: [PolyForm Noncommercial 1.0.0](LICENSE-CODE).
+
+Commercial use needs written permission. See [LICENSE](LICENSE).

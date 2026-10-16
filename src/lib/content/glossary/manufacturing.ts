@@ -60,7 +60,7 @@ stadium model    A_line = (w − h)·h + π·(h/2)²  0.25·0.20 + π·0.01 = 0.
 			{
 				type: 'list',
 				items: [
-					'**Every part is ~2.3% too much material on 2.85 mm printers:** someone hard-coded 1.75 mm in a cost estimator. Area scales with d², so (2.85/1.75)² = 2.65× per mm of filament.',
+					'**Material estimates are ~2.65× too low on 2.85 mm printers:** someone hard-coded 1.75 mm in a cost estimator. Area scales with d², so (2.85/1.75)² = 2.65× per mm of filament.',
 					'**Grams from length:** `mass = A_f × E × density`. 1 m of 1.75 mm PLA (1.24 g/cm³) ≈ 2.98 g. Off by 1000? Someone mixed mm³ and cm³.',
 					'**Relative vs absolute E** (`M83` / `M82`): the same E number means "push 0.4 mm more" or "be at 0.4 mm total". Read it wrong and you either double-extrude or barely extrude.'
 				]
@@ -160,7 +160,7 @@ else:           v_peak = √(a·L);  t = 2·v_peak/a  (triangle, never reaches v
 		aliases: ['N-line', 'M110', 'Resend'],
 		category: 'manufacturing',
 		short:
-			'When a host streams G-code over serial/USB, each line carries a number and an XOR checksum (`N124 G1 X12 E0.84*61`). If the printer sees a corrupted or skipped line, it replies `Resend: 124` and the host must resend from exactly that line. `M110 N0` resets the counter. Getting resend wrong duplicates or drops moves, which matters a lot with relative coordinates.',
+			'When a host streams G-code over serial/USB, each line carries a number and an XOR checksum (`N124 G1 X12 E0.84*35`). If the printer sees a corrupted or skipped line, it replies `Resend: 124` and the host must resend from exactly that line. `M110 N0` resets the counter. Getting resend wrong duplicates or drops moves, which matters a lot with relative coordinates.',
 		related: ['g-code', 'at-least-once', 'idempotency']
 	},
 	{
@@ -349,7 +349,7 @@ Sanity check: OEE = good parts × ideal cycle / planned time
 			{ type: 'heading', text: 'In spec ≠ in control' },
 			{
 				type: 'p',
-				text: 'Spec: 10.00 ± 0.05 mm. Control limits from the first 10 subgroups: mean 10.015, σ of subgroup means ≈ 0.005 → UCL ≈ 10.030. Every point below is inside the spec. From 09:00 every point sits above the centre line (the 8-in-a-row rule fires at 11:20), and from 11:00 points cross the UCL. That is a tool wearing or a heater drifting, hours before the first part fails inspection.'
+				text: 'Spec: 10.00 ± 0.05 mm. Control limits from the first 10 subgroups: mean ≈ 10.014, σ of subgroup means ≈ 0.0044 → UCL ≈ 10.027. Every point below is inside the spec. From 09:00 every point sits above the centre line (the 8-in-a-row rule fires at 11:20), and from 10:40 points cross the UCL. That is a tool wearing or a heater drifting, hours before the first part fails inspection.'
 			},
 			{
 				type: 'dashboard',
@@ -369,8 +369,8 @@ Sanity check: OEE = good parts × ideal cycle / planned time
 							series: [{ name: 'x̄', points: spcMean }],
 							thresholds: [
 								{ value: 10.05, label: 'USL 10.05', tone: 'crit' },
-								{ value: 10.03, label: 'UCL 10.030', tone: 'warn' },
-								{ value: 10.015, label: 'CL 10.015', tone: 'info' },
+								{ value: 10.027, label: 'UCL 10.027', tone: 'warn' },
+								{ value: 10.014, label: 'CL 10.014', tone: 'info' },
 								{ value: 9.95, label: 'LSL 9.95', tone: 'crit' }
 							]
 						}

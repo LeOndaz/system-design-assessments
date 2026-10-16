@@ -57,7 +57,7 @@ const terms: GlossaryTerm[] = [
 		term: 'Day boundary',
 		category: 'money & time',
 		short:
-			'Where "yesterday" starts and ends depends on the timezone you count in. Midnight in UTC is 20:00 the previous evening in New York, so the same sale can land on different days in two reports. Totals over a long period agree; daily numbers disagree, and the gap moves money between neighbouring days.',
+			'Where "yesterday" starts and ends depends on the timezone you count in. Midnight in UTC is 20:00 the previous evening in New York in summer (19:00 in winter), so the same sale can land on different days in two reports. Totals over a long period agree; daily numbers disagree, and the gap moves money between neighbouring days.',
 		analogy: 'Two shops that close their tills at different times will report different "daily" takings for the same customers.',
 		related: ['utc', 'iana-timezone', 'reconciliation'],
 		page: [

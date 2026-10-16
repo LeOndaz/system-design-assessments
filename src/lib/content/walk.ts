@@ -47,6 +47,13 @@ export function richIn(blocks: Block[] | undefined, out: Rich[] = []): Rich[] {
 				walk(b.mock.elements);
 				break;
 			}
+			case 'diff':
+				out.push(b.diff.description ?? '');
+				for (const f of b.diff.files) for (const n of f.notes ?? []) out.push(n.issue ?? '', n.decoy ?? '');
+				break;
+			case 'terminal':
+				out.push(b.terminal.task ?? '');
+				break;
 			case 'columns':
 				for (const c of b.columns) {
 					out.push(c.title ?? '');
@@ -68,6 +75,8 @@ function rawIn(blocks: Block[] | undefined, out: string[] = []): string[] {
 		else if (b.type === 'columns') for (const c of b.columns) rawIn(c.blocks, out);
 		else if (b.type === 'lab') out.push(b.lab.title, ...b.lab.resources.map((r) => `${r.service} ${r.name} ${r.type}`));
 		else if (b.type === 'mock') out.push(b.mock.url ?? '', b.mock.title ?? '');
+		else if (b.type === 'diff') out.push(b.diff.title, ...b.diff.files.map((f) => f.path));
+		else if (b.type === 'terminal') out.push(b.terminal.title ?? '', ...Object.keys(b.terminal.commands ?? {}));
 	}
 	return out;
 }

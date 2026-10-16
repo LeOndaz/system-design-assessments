@@ -129,7 +129,7 @@ const terms: GlossaryTerm[] = [
 			'Transforming data so it can no longer reasonably be linked to a person: removing direct identifiers (name, MRN), generalising quasi-identifiers (date of birth to year, ZIP to 3 digits), and replacing IDs with pseudonyms. It is not one operation but a policy with trade-offs. Remove too little and people can be re-identified; remove too much and the data loses research value (no follow-up scans can be linked, no intervals between dates).',
 		related: ['pseudonymization', 'date-shifting', 'k-anonymity', 'quasi-identifier', 'burned-in-phi', 'hipaa'],
 		page: [
-			{ type: 'heading', text: 'Four layers, four different failure modes' },
+			{ type: 'heading', text: 'Five layers, five different failure modes' },
 			{
 				type: 'table',
 				head: ['Layer', 'Technique', 'How it fails'],
@@ -344,7 +344,7 @@ PV1|1|I|4B^412^1|||||||MED||||||||V00049213`,
 	{
 		id: 'positive-predictive-value',
 		term: 'Positive predictive value (PPV)',
-		aliases: ['PPV', 'base rate fallacy', 'specificity', 'sensitivity'],
+		aliases: ['PPV', 'base rate fallacy'],
 		category: 'healthcare',
 		short:
 			'Of everything a test or model flags as positive, the share that really is positive. It depends heavily on how common the condition is (the **base rate**), not only on the model\'s accuracy. A 99%-sensitive, 95%-specific detector for something present in 1% of cases has a PPV of only about 17%: five of every six alerts are false. That is the mathematical root of **alarm fatigue**.',

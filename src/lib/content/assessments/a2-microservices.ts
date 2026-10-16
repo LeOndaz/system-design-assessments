@@ -8,10 +8,10 @@ const rbX = timeAxis('09:00', 60);
 const rbFraud = shape(60, { base: 80, noise: 0.1, seed: 11 }, step(20, 900));
 const rbBatch = shape(60, { base: 40, noise: 0.08, seed: 12 }, step(21, 450));
 const rbRebalances = rbX.map((_, i) => (i >= 26 && (i - 26) % 6 === 0 ? 4 : i >= 26 && (i - 26) % 6 === 1 ? 2 : 0));
-const rbLag = shape(60, { base: 2000, noise: 0.06, seed: 13 }, ramp(24, 60, 2000, 320000));
-const rbConsumed = shape(60, { base: 1200, noise: 0.06, seed: 14 }, step(24, 240));
+const rbLag = shape(60, { base: 2000, noise: 0.06, seed: 13 }, ramp(26, 60, 2000, 320000));
+const rbConsumed = shape(60, { base: 1200, noise: 0.06, seed: 14 }, step(26, 240));
 const rbProduced = shape(60, { base: 1200, noise: 0.05, seed: 15 });
-const rbBrokerCpu = shape(60, { base: 31, noise: 0.05, seed: 16 }, ramp(24, 30, 31, 46));
+const rbBrokerCpu = shape(60, { base: 31, noise: 0.05, seed: 16 }, ramp(26, 32, 31, 46));
 
 // p1q2 · hot partition
 const hpX = timeAxis('12:00', 48, 5);
@@ -200,7 +200,7 @@ const assessment: Assessment = {
 							items: [
 								{
 									title: '**[[consumer-rebalance|Rebalance storm]]: batches now take longer than `max.poll.interval.ms`.**',
-									body: 'Before 09:20: 500 records × 80 ms ≈ 40 s per batch. After `fraud-api` p99 jumped to ~900 ms: 500 × 0.9 s ≈ 450 s, above the 300 s threshold drawn on the batch panel. The broker evicts the consumer mid-batch, its partitions move to another member, which is just as slow and is evicted too. Rebalance bars start at ~09:26, a few minutes after the latency step, exactly one batch-length later. Consumption pauses during every rebalance, so consume rate drops 80% while produce rate is flat, and [[consumer-lag|lag]] grows linearly.',
+									body: 'Before 09:20: 500 records × 80 ms ≈ 40 s per batch. After `fraud-api` p99 jumped to ~900 ms: 500 × 0.9 s ≈ 450 s, above the 300 s threshold drawn on the batch panel. The broker evicts the consumer mid-batch, its partitions move to another member, which is just as slow and is evicted too. Rebalance bars start at ~09:26, about five minutes after the latency step: the first slow batches hit the 300 s `max.poll.interval.ms` limit before they finish. Consumption pauses during every rebalance, so consume rate drops 80% while produce rate is flat, and [[consumer-lag|lag]] grows linearly.',
 									confirm: 'Consumer logs for `CommitFailedException` / "member … has left the group because the poll interval was exceeded"; group coordinator logs showing generation ids climbing every few minutes.'
 								},
 								{
@@ -476,7 +476,7 @@ const assessment: Assessment = {
 					tag: 'core',
 					minutes: 4,
 					prompt: [
-						{ type: 'p', text: '[[rolling-update|Rolling deploys]] of `api` (12 pods, `maxUnavailable: 2`). Each deploy produces ~90 seconds of 502/503 errors. A teammate thinks new pods are being sent traffic before they\'re warm.' },
+						{ type: 'p', text: '[[rolling-update|Rolling deploys]] of `api` (12 pods, `maxUnavailable: 2`). Each deploy produces ~3 minutes of 502/503 errors. A teammate thinks new pods are being sent traffic before they\'re warm.' },
 						{
 							type: 'dashboard',
 							dashboard: {
@@ -689,7 +689,7 @@ const assessment: Assessment = {
 									counts: [0, 0, 41, 66, 62, 58, 61, 60, 59, 63, 61, 60, 58, 62, 59, 61, 60, 62, 58, 59, 61, 60, 63, 60, 58, 61, 62, 59, 60, 61, 58, 60, 62, 59, 61, 60, 58, 61, 60, 59, 61, 60, 2, 0],
 									errors: [0, 0, 41, 66, 62, 58, 61, 60, 59, 63, 61, 60, 58, 62, 59, 61, 60, 62, 58, 59, 61, 60, 63, 60, 58, 61, 62, 59, 60, 61, 58, 60, 62, 59, 61, 60, 58, 61, 60, 59, 61, 60, 0, 0]
 								},
-								total: '2,431 hits',
+								total: '2,396 hits',
 								lines: [
 									{ ts: '03:12:20.551', level: 'ERROR', source: 'billing-api', msg: 'could not connect to server: Connection refused', fields: { resolved_ip: '10.0.4.17' } },
 									{ ts: '03:12:51.020', level: 'INFO', source: 'billing-api', msg: 'connection established', fields: { resolved_ip: '10.0.7.88' } },
@@ -1289,8 +1289,9 @@ Evidence
 - Reproduced in staging: kill -TERM during load → 6/1000 orders missing.
 
 Impact
-412 orders (list in the PR) placed but not fulfilled; customers were
-charged. Oldest is 29 days old.
+412 orders in the last 30 days (list in the PR) placed but not fulfilled;
+customers were charged. The bug dates from 2025-11-03, so older orders
+are affected too; reconciliation back to that date is running.
 
 Fix (PR #2231)
 1. Insert the event into an outbox table in the same transaction as the
@@ -1474,7 +1475,7 @@ class OrderProjector:
 						{
 							type: 'list',
 							items: [
-								'**Dedupe by version, not by `event_id`.** A producer retry might mint a new event id for the same change; the version is the natural key. (If two events share a version but differ in content, that\'s a producer bug worth flagging; see the tests.)',
+								'**Dedupe by version, not by `event_id`.** A producer retry might mint a new event id for the same change; the version is the natural key. (If two events share a version but differ in content, that\'s a producer bug; this code silently keeps whichever arrived first, so in production log or alert on it.)',
 								'**O(1) per delivery** amortised; each event is buffered and popped once.',
 								'**The buffer is bounded.** An unbounded buffer is a [[memory-leak]] the first time a version is truly lost.',
 								'`apply` is a separate function: one place to add event types, easy to unit-test.'
@@ -1620,7 +1621,7 @@ def test_any_delivery_order_gives_same_state():
 					title: 'Three retry layers',
 					tag: 'teaser',
 					prompt: [{ type: 'p', text: 'bff retries 2×, cart-svc retries 3×, the [[service-mesh|mesh]] retries 2× on every hop. A request to the bottom service always fails. How many calls hit it per user click?' }],
-					answer: [{ type: 'p', text: '(1+2) × (1+3) × (1+2) = **36**. And the mesh also retries the bff → cart hop, so it\'s worse: (1+2)(1+2) × (1+3)(1+2) = 108 if the mesh is on both hops. Retry in one place.' }]
+					answer: [{ type: 'p', text: 'The mesh sits on both hops: bff → cart is (1+2) × (1+2) = 9 calls to cart, and each cart call makes (1+3) × (1+2) = 12 calls to the bottom service, so 9 × 12 = **108**. The tempting 36 forgets the mesh on the bff → cart hop. Retry in one place.' }]
 				},
 				{
 					id: 't3',

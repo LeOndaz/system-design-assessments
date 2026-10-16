@@ -3,11 +3,13 @@
  * Catches broken glossary links, duplicate ids and malformed chart data before they ship.
  */
 import { describe, expect, it } from 'vitest';
-import { assessments, glossary } from './index';
+import { assessments, assessmentFilesMissingExport, glossary } from './index';
 import { termRefs } from './inline';
-import type { Block, Lab, MockEl, Panel, Rich } from './types';
+import type { Block, CodeDiff, Lab, MockEl, Panel, Rich, TerminalScenario } from './types';
 import { richIn } from './walk';
 import { replay } from '$lib/labs/engine';
+import { Shell } from '$lib/terminal/shell';
+import { parsePatch } from '$lib/review/patch';
 
 const termIds = new Set(glossary.map((t) => t.id));
 
@@ -54,6 +56,35 @@ function labProblems(lab: Lab): string[] {
 	return errs;
 }
 
+/** Replay the scenario's reference commands: none may hit "command not found", and a final submit must pass. */
+function terminalProblems(t: TerminalScenario): string[] {
+	const errs: string[] = [];
+	const sh = new Shell(t);
+	for (const cmd of t.solution) {
+		const out = sh.run(cmd).text;
+		if (/command not found|unsupported in this sandbox/.test(out)) errs.push(`terminal "${t.title ?? ''}": \`${cmd}\` → ${out.trim().slice(0, 80)}`);
+	}
+	if (t.answer && !sh.solved) errs.push(`terminal "${t.title ?? ''}": solution never reaches a passing submit`);
+	if (t.answer && new Shell(t).run('submit wrong-answer-xyz').text.includes('Correct')) errs.push(`terminal "${t.title ?? ''}": accepts any answer`);
+	return errs;
+}
+
+/** Every note must anchor to exactly one line; review diffs need ≥2 issues. */
+function diffProblems(d: CodeDiff): string[] {
+	const errs: string[] = [];
+	let issues = 0;
+	for (const f of d.files) {
+		const rows = parsePatch(f);
+		for (const n of f.notes ?? []) {
+			const hits = rows.filter((r) => r.kind !== 'hunk' && r.text.includes(n.match)).length;
+			if (hits !== 1) errs.push(`diff "${d.title}" ${f.path}: note "${n.match}" matches ${hits} lines`);
+			if (n.issue) issues++;
+		}
+	}
+	if (d.mode !== 'view' && issues < 2) errs.push(`diff "${d.title}": review mode needs ≥2 issues`);
+	return errs;
+}
+
 function blockProblems(blocks: Block[] | undefined): string[] {
 	const errs: string[] = [];
 	for (const b of blocks ?? []) {
@@ -73,6 +104,8 @@ function blockProblems(blocks: Block[] | undefined): string[] {
 			});
 		if (b.type === 'columns') for (const c of b.columns) errs.push(...blockProblems(c.blocks));
 		if (b.type === 'lab') errs.push(...labProblems(b.lab));
+		if (b.type === 'terminal') errs.push(...terminalProblems(b.terminal));
+		if (b.type === 'diff') errs.push(...diffProblems(b.diff));
 		if (b.type === 'mock' && b.mock.mode === 'spot') {
 			const flat: MockEl[] = [];
 			const walk = (els: MockEl[]) => els.forEach((e) => (flat.push(e), e.children && walk(e.children)));
@@ -116,6 +149,10 @@ describe('glossary', () => {
 });
 
 describe('assessments', () => {
+	it('every assessment file default-exports an Assessment', () => {
+		expect(assessmentFilesMissingExport).toEqual([]);
+	});
+
 	it('have unique ids and numbers', () => {
 		expect(new Set(assessments.map((a) => a.id)).size).toBe(assessments.length);
 		expect(new Set(assessments.map((a) => a.number)).size).toBe(assessments.length);

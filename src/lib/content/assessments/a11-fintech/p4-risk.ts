@@ -130,7 +130,7 @@ export const risk: Part = {
 						{ title: 'Use a [[sliding-window]] (or token bucket).', body: 'Removes the ×2 boundary burst.' },
 						{
 							title: 'Give each card a home region.',
-							body: 'Hash the card fingerprint to one region and do the counter there; only cross-region requests pay the extra latency, and card-testing traffic, which is spread out, is exactly what gets routed.'
+							body: 'Pin each card\'s counter to one region chosen from where its legitimate traffic comes from (issuing country, or the region it was first seen in), not a random hash. A cardholder\'s normal authorizations arrive there and stay local. Only requests arriving in another region pay a cross-region hop, and card-testing traffic, spread across regions, is exactly what gets forwarded to that single counter.'
 						},
 						{
 							title: 'Or lease quota.',
@@ -189,7 +189,7 @@ Engineering proposed raising the match threshold from 85 to 92 to "get back to n
 			answer: [
 				{
 					type: 'p',
-					text: 'First the [[base-rate-fallacy|base rate]]: ~40,000 payouts a day go through [[sanctions-screening|sanctions screening]]. 200 alerts/day ≈ 0.5% flagged; 1,200 ≈ 3%. With about 2 true hits a *year*, essentially **every alert is a false positive** before and after: precision was already ~0.003% and is now ~0.0005%. Capacity: 6 analysts clear 1,050/day against 1,200 arriving → backlog grows ~150/day, as the chart shows.'
+					text: 'First the [[base-rate-fallacy|base rate]]. The ticket does not give payout volume, so assume something like ~40,000 payouts a day go through [[sanctions-screening|sanctions screening]]: 200 alerts/day ≈ 0.5% flagged; 1,200 ≈ 3%. The conclusion does not depend on that number. With about 2 true hits a *year*, essentially **every alert is a false positive** before and after: precision was already ~0.003% and is now ~0.0005%. Capacity: 6 analysts clear 1,050/day against 1,200 arriving → backlog grows ~150/day, as the chart shows.'
 				},
 				{
 					type: 'p',
@@ -330,7 +330,7 @@ export async function onVendorEvent(e: VendorEvent) {
 			answer: [
 				{
 					type: 'p',
-					text: 'The obvious suspect is the web integration; the logs say **mobile**. App versions ≤ 5.2 still post raw card numbers to a legacy `/v1/payments` route, and a validation middleware logs request bodies on 4xx (it masks `cvc` by field name, not card numbers). So the API, the log pipeline, the log vendor and anything with access to them are in scope, and have been for as long as that route existed.'
+					text: 'The obvious suspect is the web integration; the logs say **mobile**. ShopApp 5.2.0 (iOS and Android; check the full 1,212 hits for older versions too) still posts raw card numbers to a legacy `/v1/payments` route, and a validation middleware logs request bodies on 4xx (it masks `cvc` by field name, not card numbers). So the API, the log pipeline, the log vendor and anything with access to them are in scope, and have been for as long as that route existed.'
 				},
 				{
 					type: 'ranked',

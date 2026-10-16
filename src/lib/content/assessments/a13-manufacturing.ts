@@ -211,16 +211,16 @@ const a13: Assessment = {
 								style: 'terminal',
 								title: 'host serial log · P-09',
 								lines: [
-									{ ts: '03:12:07.101', source: 'send', msg: 'N2040 G1 X112.4 Y80.2 E0.0381*87' },
+									{ ts: '03:12:07.101', source: 'send', msg: 'N2040 G1 X112.4 Y80.2 E0.0381*82' },
 									{ ts: '03:12:07.109', source: 'recv', msg: 'ok' },
-									{ ts: '03:12:07.113', source: 'send', msg: 'N2041 G1 X112.9 Y80.6 E0.0412*93' },
-									{ ts: '03:12:07.118', source: 'send', msg: 'N2042 G1 X113.3 Y81.1 E0.0398*80' },
+									{ ts: '03:12:07.113', source: 'send', msg: 'N2041 G1 X112.9 Y80.6 E0.0412*87' },
+									{ ts: '03:12:07.118', source: 'send', msg: 'N2042 G1 X113.3 Y81.1 E0.0398*92' },
 									{ ts: '03:12:07.126', level: 'WARN', source: 'recv', msg: 'Error:checksum mismatch, Last Line: 2040' },
 									{ ts: '03:12:07.126', source: 'recv', msg: 'Resend: 2041' },
-									{ ts: '03:12:07.131', source: 'send', msg: 'N2041 G1 X112.9 Y80.6 E0.0412*93' },
-									{ ts: '03:12:07.140', source: 'send', msg: 'N2042 G1 X113.3 Y81.1 E0.0398*80' },
+									{ ts: '03:12:07.131', source: 'send', msg: 'N2041 G1 X112.9 Y80.6 E0.0412*87' },
+									{ ts: '03:12:07.140', source: 'send', msg: 'N2042 G1 X113.3 Y81.1 E0.0398*92' },
 									{ ts: '03:12:07.142', source: 'recv', msg: 'ok' },
-									{ ts: '03:12:07.147', source: 'send', msg: 'N2042 G1 X113.3 Y81.1 E0.0398*80' },
+									{ ts: '03:12:07.147', source: 'send', msg: 'N2042 G1 X113.3 Y81.1 E0.0398*92' },
 									{ ts: '03:12:07.150', source: 'recv', msg: 'ok' },
 									{ ts: '03:12:07.156', source: 'recv', msg: 'ok' }
 								]
@@ -300,7 +300,7 @@ def dispatch(job, printer):
 								'**[[idempotency-key|Idempotency key]] on the agent:** send `job_id` and have the agent store accepted ids durably; a repeat POST returns the existing job\'s status instead of queuing a copy.',
 								'**Reply before slow work:** the agent should persist the job and return `202 Accepted` immediately, then heat the bed. Long synchronous handlers create timeouts.',
 								'**Reconcile instead of blind retry:** after a timeout, `GET /jobs/{job_id}` on the agent before deciding to re-send.',
-								'**Physical side effects are [[at-least-once|at-most-once]] by design:** a duplicate costs material and hours and can\'t be refunded. Make the expensive step (the physical start) the deduplicated one, and keep retries for the cheap messages around it.'
+								'**Physical side effects are at-most-once by design (the opposite of [[at-least-once]]):** a duplicate costs material and hours and can\'t be refunded. Make the expensive step (the physical start) the deduplicated one, and keep retries for the cheap messages around it.'
 							]
 						}
 					]
@@ -753,7 +753,7 @@ on another machine that runs 0.1 mm small → 50.50 slot vs 50.49 stack: jams`
 					answer: [
 						{
 							type: 'p',
-							text: '**It\'s float32 precision, and your colleague has the mechanism backwards.** A float32 has 24 bits of mantissa. Between 8,192 and 16,384 the gap between representable numbers is 2⁻¹⁰ ≈ **0.00098 mm**. Late in the print, E is ~12,000, and a thin feature asks for E to grow by 0.002 mm per move: that rounds to 0.00195 or 0.00098, an error of up to ±50% per move. Early in the print, at E ≈ 50, the step is ~0.000004 mm and nothing is lost. It\'s about the size of the *absolute* number the firmware holds.'
+							text: '**It\'s float32 precision, and your colleague has the mechanism backwards.** A float32 has 24 bits of mantissa. Between 8,192 and 16,384 the gap between representable numbers is 2⁻¹⁰ ≈ **0.00098 mm**. Late in the print, E is ~12,000, and a thin feature asks for E to grow by 0.002 mm per move: each sum snaps to the nearest grid point, so the step is stored as 0.00195 (two grid steps), about 2.4% short on every move. The rounding error can be up to half a grid step (~0.0005 mm), which is ±50% for a 0.001 mm move. Early in the print, at E ≈ 50, the step is ~0.000004 mm and nothing is lost. It\'s about the size of the *absolute* number the firmware holds.'
 						},
 						{
 							type: 'list',
@@ -1066,8 +1066,8 @@ Audit: 361 × 1.0 / 480           = 0.752 ✓`
 										series: [{ name: 'x̄', points: q19Mean }],
 										thresholds: [
 											{ value: 10.05, label: 'USL 10.05', tone: 'crit' },
-											{ value: 10.0087, label: 'UCL 10.0087', tone: 'warn' },
-											{ value: 9.9918, label: 'LCL 9.9918', tone: 'warn' },
+											{ value: 10.0136, label: 'UCL 10.0136', tone: 'warn' },
+											{ value: 9.987, label: 'LCL 9.9870', tone: 'warn' },
 											{ value: 9.95, label: 'LSL 9.95', tone: 'crit' }
 										]
 									},
@@ -1077,7 +1077,7 @@ Audit: 361 × 1.0 / 480           = 0.752 ✓`
 						},
 						{
 							type: 'p',
-							text: 'Spec 10.00 ± 0.05 mm. Control limits were computed from the first 8 subgroups (mean 10.0003, σ of means 0.0028). Within-subgroup σ is about 0.010 mm. The production manager: "nothing is out of spec, so nothing is wrong". Who\'s right? Compute Cp and Cpk for the last 4 hours (mean ≈ 10.0185).'
+							text: 'Spec 10.00 ± 0.05 mm. Control limits were computed from the first 8 subgroups (mean 10.0003; R̄ ≈ 0.023, so σ of means = R̄ / d₂ / √5 ≈ 0.0044). Within-subgroup σ is about 0.010 mm. The production manager: "nothing is out of spec, so nothing is wrong". Who\'s right? Compute Cp and Cpk for the last 4 hours (mean ≈ 10.0185).'
 						}
 					],
 					answer: [
@@ -1088,9 +1088,10 @@ Audit: 361 × 1.0 / 480           = 0.752 ✓`
 						{
 							type: 'list',
 							items: [
-								'**11:00** (subgroup 11): 2 of 3 consecutive points beyond 2σ (10.006, 10.007 > 10.0059).',
-								'**11:30**: first point beyond the UCL (10.009 > 10.0087).',
+								'**12:00** (subgroup 13): 4 of 5 consecutive points beyond 1σ (10.006, 10.007, 10.009, 10.008 > 10.0047).',
+								'**13:00**: 2 of 3 consecutive points beyond 2σ (10.011, 10.013 > 10.0091).',
 								'**13:30**: 8 points in a row above the centre line.',
+								'**14:00**: first point beyond the UCL (10.015 > 10.0136).',
 								'The R chart is flat: spread is unchanged, the **mean is moving**. That\'s a drift (tool wear, thermal growth, an offset), not more noise.'
 							]
 						},
@@ -1101,7 +1102,7 @@ Audit: 361 × 1.0 / 480           = 0.752 ✓`
 Cpk = (USL − mean) / 3σ       = 0.0315 / 0.030   = 1.05   (now marginal)
 
 Cpk 1.05 → ~0.08% of parts beyond the upper limit. At this drift rate (~0.003 mm/hour,
-10.000 at 10:00 → 10.022 at 17:30) the mean reaches the USL overnight.`
+10.000 at 09:30 → 10.022 at 17:30) the mean reaches the USL overnight.`
 						},
 						{
 							type: 'p',
@@ -1288,7 +1289,7 @@ FROM serials s JOIN downstream d ON s.batch_lot = d.child_lot;`
 							items: [
 								{
 									title: 'Evidence: the printers are starved, not saturated.',
-									body: 'Printer pool status says **Starved**; utilisation never reaches 100% because idle printers wait for G-code; the slicer queue holds ~270 jobs and slicer output is 0.5 jobs/min. The printers could do 40 ÷ 60 = 0.67 jobs/min. The slicer is the bottleneck: projected finish ~660 min against a 420 min deadline.'
+									body: 'Printer pool status says **Starved**; utilisation never reaches 100% because idle printers wait for G-code; the slicer queue starts at 300 jobs and barely moves, because slicer output is only 0.5 jobs/min. The printers could do 40 ÷ 60 = 0.67 jobs/min. The slicer is the bottleneck: projected finish ~660 min against a 420 min deadline.'
 								},
 								{
 									title: 'Trap 1: turn on hall B (80 printers).',
@@ -1513,7 +1514,7 @@ def analyze(gcode: str, accel: float = 1000.0) -> Result:
 						},
 						{
 							type: 'p',
-							text: '**Design notes worth saying out loud:** modal state lives in a few variables and every command updates them explicitly; unit scaling happens once at parse time so the rest of the code is in mm; `move_time` is a pure function you can test in isolation. O(lines) time, O(1) memory, so it streams 500 MB files.'
+							text: '**Design notes worth saying out loud:** modal state lives in a few variables and every command updates them explicitly; unit scaling happens once at parse time so the rest of the code is in mm; `move_time` is a pure function you can test in isolation. O(lines) time and O(1) parser state; to stream 500 MB files, pass an iterable of lines (e.g. an open file) instead of a `str` and drop `splitlines()`, which holds every line in memory.'
 						}
 					]
 				},
@@ -1664,7 +1665,7 @@ def test_lowercase_and_extra_spaces():
 				},
 				{
 					id: 'p5q5',
-					title: 'Why does this naive version get three warm-up rows wrong?',
+					title: 'Why does this naive version get filament wrong in four warm-up rows, and time in all of them?',
 					tag: 'tricky',
 					prompt: [
 						{
@@ -1690,6 +1691,7 @@ def test_lowercase_and_extra_spaces():
 							type: 'list',
 							items: [
 								'**(c) Only positive ΔE counted:** the unretract after a retract is counted again → 9 instead of 7. Retracts are free filament round-trips.',
+								'**(d) Relative E ignored:** under `M83` each E1 is a delta, but naive treats it as absolute, so the second and third E1 are not "greater" than 1 and are dropped → 1 instead of 3.',
 								'**(f) `G92` ignored:** after `G92 E0` the next E4 looks like a *decrease* from 10, so it\'s dropped → 10 instead of 14.',
 								'**Time is wrong everywhere:** F is in mm/**minute** (divide by 60), it is modal (missing F here falls back to 1), there\'s no acceleration, and only X counts as distance. (e) fails three ways: inches, per-minute F, and E scaled by 25.4.',
 								'Lesson: G-code is a **state machine**, not a list of independent lines. Most bugs come from forgetting a piece of modal state.'
@@ -1781,7 +1783,7 @@ def test_lowercase_and_extra_spaces():
 					answer: [
 						{
 							type: 'p',
-							text: '2,000 ÷ 200 = **every 10 hours**, about twice per day shift. Fleet operations need a failure process (spares, triage, auto-rescheduling), not heroics. Same arithmetic as [[fan-out]] tail latency.'
+							text: '2,000 ÷ 200 = **every 10 hours**, about one per shift and more than twice a day. Fleet operations need a failure process (spares, triage, auto-rescheduling), not heroics. Same arithmetic as [[fan-out]] tail latency.'
 						}
 					]
 				},

@@ -37,7 +37,7 @@ const lab: Lab = {
 				[
 					'Pod events',
 					pending(s)
-						? '0/13 nodes are available: 4 node(s) had volume node affinity conflict, 9 Insufficient cpu. preemption: not helpful'
+						? `0/${n(s, 'aNodes') + n(s, 'bNodes') + 5} nodes are available: ${n(s, 'bNodes') + 5} node(s) had volume node affinity conflict, ${n(s, 'aNodes')} Insufficient cpu. preemption: not helpful`
 						: 'Scheduled'
 				]
 			],

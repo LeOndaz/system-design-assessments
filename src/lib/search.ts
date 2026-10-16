@@ -18,7 +18,7 @@ function build(): SearchItem[] {
 	for (const a of assessments) {
 		items.push({
 			kind: 'assessment',
-			title: `${a.number}. ${a.title}`,
+			title: a.title,
 			context: a.tagline,
 			href: assessmentHref(a.id),
 			haystack: `${a.title} ${a.tagline} ${a.topics.join(' ')}`.toLowerCase()
@@ -29,7 +29,7 @@ function build(): SearchItem[] {
 				items.push({
 					kind: 'question',
 					title,
-					context: `#${a.number} ${a.title} · ${p.nav}`,
+					context: `${a.title} · ${p.nav}`,
 					href: assessmentHref(a.id, `q-${q.id}`),
 					haystack: `${title} ${questionText(q)}`.toLowerCase()
 				});

@@ -192,7 +192,7 @@ options ndots:5`
 			{ type: 'heading', text: 'Why it shows up as "5 seconds, sometimes"' },
 			{
 				type: 'p',
-				text: 'glibc sends A and AAAA queries in parallel from the same UDP socket. Under load, a conntrack race on the node can drop one of them; the resolver then waits the full `timeout:5` before retrying. Multiply by many queries per lookup and some external calls take exactly 5 s, 10 s… while in-cluster names (`orders.payments`, which match on the first search domain) stay fast.'
+				text: 'glibc sends A and AAAA queries in parallel from the same UDP socket. Under load, a conntrack race on the node can drop one of them; the resolver then waits the full `timeout:5` before retrying. Multiply by many queries per lookup and some external calls take exactly 5 s, 10 s… while in-cluster names (`orders.payments`, which match on the second search domain, `svc.cluster.local`) stay fast.'
 			},
 			{
 				type: 'list',

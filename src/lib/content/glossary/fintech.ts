@@ -118,7 +118,7 @@ const terms: GlossaryTerm[] = [
 			{ type: 'heading', text: 'Where rounding sneaks in' },
 			{
 				type: 'p',
-				text: 'Accruing daily and rounding each day to cents: 1,000,000 × 0.0525 ÷ 360 = 145.8333… → **$145.83** per day, × 31 = **$4,520.73**: ten cents short of the period calculation ($4,520.83). Across 50,000 loans that is $5,000 a month of interest nobody can explain. Accrue the exact value (Decimal or rational), round once when you post or bill, and write down which you do.'
+				text: 'Accruing daily and rounding each day to cents: 1,000,000 × 0.0525 ÷ 360 = 145.8333… → **$145.83** per day, × 31 = **$4,520.73**: ten cents short of the period calculation ($4,520.83). Across 50,000 loans like this one that is $5,000 a month of interest nobody can explain. Accrue the exact value (Decimal or rational), round once when you post or bill, and write down which you do.'
 			},
 			{ type: 'heading', text: 'Simple vs compounded' },
 			{

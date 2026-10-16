@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { assessments, glossary, questionCount } from '$lib/content';
+	import { assessments, glossary, questionCount, TRACKS, inTrack } from '$lib/content';
 	import { assessmentHref, href } from '$lib/paths';
 	import { progress } from '$lib/state/progress.svelte';
+	import { assessmentMinutes, formatMinutes } from '$lib/content/estimate';
 	import Rich from '$lib/components/Rich.svelte';
 
 	const totalQ = assessments.reduce((n, a) => n + questionCount(a), 0);
@@ -17,13 +18,23 @@
 		};
 	};
 	const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
-	const tracks = [
-		{ id: 'core', title: 'Core assessments', blurb: 'Focused sets, each built around one kind of pressure.' },
-		{ id: 'interactive', title: 'Interactive labs', blurb: 'Work the incident in a simulated console: live metrics, rollout delays, traps.' },
-		{ id: 'mixed', title: 'Mixed', blurb: 'Everything interleaved, the way a real week arrives. No warning about what comes next.' },
-		{ id: 'specialist', title: 'Specialist', blurb: 'Outside the mixes: UX, accessibility and product judgement.' }
-	] as const;
-	const byTrack = (id: string) => assessments.filter((a) => (a.track ?? 'core') === id);
+	const tracks = TRACKS;
+	const byTrack = inTrack;
+
+	let copied = $state<string | null>(null);
+	async function share(a: (typeof assessments)[number]) {
+		const url = new URL(assessmentHref(a.id), location.origin).href;
+		try {
+			if (navigator.share) await navigator.share({ title: a.title, text: a.tagline, url });
+			else {
+				await navigator.clipboard.writeText(url);
+				copied = a.id;
+				setTimeout(() => (copied = copied === a.id ? null : copied), 1600);
+			}
+		} catch {
+			/* share sheet dismissed */
+		}
+	}
 	const featured = ['multi-tenancy', 'query-plan-flip', 'littles-law', 'idempotency', 'cache-stampede', 'saga'].filter((id) =>
 		glossary.some((t) => t.id === id)
 	);
@@ -55,20 +66,26 @@
 	{#if byTrack(tr.id).length}
 	<div class="track-head"><h2>{tr.title}</h2><p>{tr.blurb}</p></div>
 	<section class="list" aria-label={tr.title}>
-		{#each byTrack(tr.id) as a (a.id)}
+		{#each byTrack(tr.id) as a, ai (a.id)}
 			{@const qids = ids(a)}
 			{@const done = progress.count(a.id, qids)}
 			{@const k = kinds(a)}
-			<a class="card" href={assessmentHref(a.id)}>
-				<div class="num">{String(a.number).padStart(2, '0')}</div>
+			<article class="card">
+				<div class="num">{String(ai + 1).padStart(2, '0')}</div>
 				<div class="body">
 					<div class="row">
-						<h2>{a.title}</h2>
-						<span class="chip {a.difficulty === 'advanced' ? 'warn' : a.difficulty === 'foundation' ? 'muted' : ''}">{a.difficulty}</span>
+						<h2><a class="stretch" href={assessmentHref(a.id)}>{a.title}</a></h2>
+						<div class="right">
+							<span class="chip {a.difficulty === 'advanced' ? 'warn' : a.difficulty === 'foundation' ? 'muted' : ''}">{a.difficulty}</span>
+							<button type="button" class="share" onclick={() => share(a)} aria-label="Share {a.title}" title="Share a link to this assessment">
+								{copied === a.id ? '✓ copied' : '↗ share'}
+							</button>
+						</div>
 					</div>
 					<p class="tag">{a.tagline}</p>
 					<div class="meta">
-						<span>{a.minutes} min</span>
+						<span class="total" title="Estimated from the {qids.length} questions inside">≈ {formatMinutes(assessmentMinutes(a))} total</span>
+						<span title="Suggested exam time for the timed format">{a.minutes} min timed</span>
 						<span>{a.parts.filter((p) => p.questions.length).length} parts</span>
 						<span>{qids.length} questions</span>
 						{#if k.labs}<span class="hot">{plural(k.labs, 'live lab')}</span>{/if}
@@ -82,7 +99,7 @@
 						<span>{done}/{qids.length}</span>
 					</div>
 				</div>
-			</a>
+			</article>
 		{/each}
 	</section>
 	{/if}
@@ -159,6 +176,10 @@
 		color: var(--muted);
 		font-size: 15px;
 	}
+	.total {
+		color: var(--ink);
+		font-weight: 500;
+	}
 	.hot {
 		color: var(--accent);
 		font-weight: 500;
@@ -169,6 +190,7 @@
 		padding-block: 12px 24px;
 	}
 	.card {
+		position: relative;
 		display: grid;
 		grid-template-columns: auto 1fr;
 		gap: 18px;
@@ -187,6 +209,38 @@
 		border-color: var(--accent);
 		box-shadow: var(--shadow);
 		transform: translateY(-1px);
+	}
+	.stretch {
+		color: inherit;
+		text-decoration: none;
+	}
+	/* The title link covers the whole card; the share button sits above it. */
+	.stretch::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		border-radius: 12px;
+	}
+	.right {
+		display: flex;
+		gap: 8px;
+		align-items: center;
+	}
+	.share {
+		position: relative;
+		z-index: 1;
+		font-family: var(--f-mono);
+		font-size: 11.5px;
+		padding: 3px 9px;
+		border: 1px solid var(--line);
+		border-radius: 6px;
+		background: var(--surface);
+		color: var(--muted);
+		cursor: pointer;
+	}
+	.share:hover {
+		color: var(--accent);
+		border-color: var(--accent);
 	}
 	.num {
 		min-width: 2.6ch;

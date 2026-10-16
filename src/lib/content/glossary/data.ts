@@ -262,7 +262,7 @@ ORDER BY xact_start;`
 		aliases: ['autovacuum', 'vacuum'],
 		category: 'databases',
 		short:
-			"Postgres's garbage collector. It marks space from dead row versions as reusable and \"freezes\" old rows so transaction ids can be recycled. Autovacuum runs it in the background. It can't clean anything newer than the oldest open transaction, so one forgotten transaction makes autovacuum run constantly while achieving nothing. Ordinary vacuum also doesn't shrink the file. Only `VACUUM FULL` or `pg_repack` gives disk back.",
+			"Postgres's garbage collector. It marks space from dead row versions as reusable and \"freezes\" old rows so transaction ids can be recycled. Autovacuum runs it in the background. It can't clean anything newer than the oldest open transaction, so one forgotten transaction makes autovacuum run constantly while achieving nothing. Ordinary vacuum rarely shrinks the file (it can only trim empty pages at the very end). Reliably giving disk back takes `VACUUM FULL` or `pg_repack`.",
 		related: ['mvcc', 'table-bloat', 'xid-wraparound', 'idle-in-transaction']
 	},
 	{

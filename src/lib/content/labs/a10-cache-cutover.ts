@@ -23,7 +23,7 @@ const lab: Lab = {
 	console: 'cloud',
 	scope: 'prod · us-east-1',
 	brief:
-		'`cache-v1` (Redis, 26 GB) is at 100% memory and evicting hot keys: [[cache-hit-rate|hit rate]] has slid from 96% to ~89% and keeps falling as the catalogue grows, and Postgres read CPU is climbing. Finance approved a bigger cluster. Move the app onto it without an outage. The app reads ~60,000 keys/s; Postgres can absorb ~9,000 reads/s before it saturates.',
+		'`cache-v1` (Redis, 26 GB) is at 100% memory and evicting hot keys: [[cache-hit-rate|hit rate]] has slid from 96% to ~90% and keeps falling as the catalogue grows, and Postgres read CPU is climbing. Finance approved a bigger cluster. Move the app onto it without an outage. The app reads ~60,000 keys/s; Postgres can absorb ~9,000 reads/s before it saturates.',
 	resources: [
 		{
 			id: 'v2',

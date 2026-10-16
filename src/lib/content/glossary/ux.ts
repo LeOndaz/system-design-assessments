@@ -306,7 +306,7 @@ const terms: GlossaryTerm[] = [
 		aliases: ['SameSite', 'third-party cookies'],
 		category: 'security & compliance',
 		short:
-			"A cookie attribute deciding whether the browser sends the cookie on requests that come from another site. `Lax` (the default in most browsers) blocks it inside cross-site iframes and on cross-site POSTs. Safari and Firefox also block third-party cookies entirely, even with `SameSite=None; Secure`. So an app embedded in a partner's iframe can log in successfully and still look logged-out on the next request, producing a login loop in one browser only.",
+			"A cookie attribute deciding whether the browser sends the cookie on requests that come from another site. `Lax` (the default in most browsers) blocks it inside cross-site iframes and on cross-site POSTs. Safari also blocks third-party cookies entirely, even with `SameSite=None; Secure`, and Firefox partitions them per top-level site. So an app embedded in a partner's iframe can log in successfully and still look logged-out on the next request, producing a login loop in one browser only.",
 		related: ['content-security-policy', 'sso']
 	},
 	{
@@ -356,7 +356,7 @@ const terms: GlossaryTerm[] = [
 								}
 							],
 							thresholds: [{ value: 0.05, tone: 'crit', label: 'p = 0.05' }],
-							markers: [{ at: 4, label: 'someone shipped it here' }]
+							markers: [{ at: 5, label: 'someone shipped it here' }]
 						}
 					]
 				}
@@ -364,7 +364,7 @@ const terms: GlossaryTerm[] = [
 			{
 				type: 'callout',
 				tone: 'info',
-				text: 'The curve dipped under 0.05 on day 5 and wandered back. Stopping there "proves" a win that was noise.'
+				text: 'The curve dipped under 0.05 on day 6 and wandered back. Stopping there "proves" a win that was noise.'
 			}
 		]
 	},

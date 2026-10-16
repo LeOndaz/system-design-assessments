@@ -14,8 +14,8 @@ const hypoAlerts = shape(42, { base: 14, noise: 0.25, seed: 14 }, step(29, 410))
 
 // AI pneumothorax flag: alerts vs confirmed per day, before/after outpatient rollout on day 20
 const ptxX = dayAxis('Aug 18', 40);
-const ptxAlerts = shape(40, { base: 31, noise: 0.15, seed: 21 }, step(20, 178));
-const ptxConfirmed = shape(40, { base: 19, noise: 0.18, seed: 22 }, step(20, 22));
+const ptxAlerts = shape(40, { base: 31, noise: 0.15, seed: 21 }, step(20, 152));
+const ptxConfirmed = shape(40, { base: 19, noise: 0.18, seed: 22 }, step(20, 29));
 const ptxStudies = shape(40, { base: 380, noise: 0.06, seed: 23 }, step(20, 3600));
 
 // Bedside vitals: ward Wi-Fi outage 02:10–02:40, then buffered uploads
@@ -23,12 +23,12 @@ const vX = timeAxis('01:50', 70);
 const vLag = shape(70, { base: 2, noise: 0.3, seed: 31, round: 1 }, ramp(20, 50, 2, 1800), step(50, 40), ramp(52, 58, 40, 3));
 const vIngest = shape(70, { base: 210, noise: 0.08, seed: 32 }, step(20, 0), step(50, 3900), step(53, 1200), step(56, 210));
 const vNews = shape(70, { base: 3, noise: 0.05, seed: 33, round: 1 }, step(20, 0), step(50, 3), bump(55, 70, 4));
-const vFuture = shape(70, { base: 0, noise: 0, seed: 34 }, step(50, 21), step(54, 4));
+const vFuture = shape(70, { base: 4, noise: 0, seed: 34 }, step(20, 0), step(50, 21), step(54, 4));
 
 // STOW uploads
 const stX = timeAxis('09:00', 60);
 const stowOk = shape(60, { base: 140, noise: 0.1, seed: 41 }, wave(30, 0.2));
-const stow413 = shape(60, { base: 0, noise: 0, seed: 42 }, periodic(12, 1, 3, 5));
+const stow413 = shape(60, { base: 0, noise: 0, seed: 42 }, periodic(12, 1, 1, 5));
 const stowDur = shape(60, { base: 900, noise: 0.15, seed: 43 }, periodic(12, 1, 59000, 5));
 
 const a12: Assessment = {
@@ -149,7 +149,7 @@ It seems to happen when the technologist fixes something after the scan, like a 
 							items: [
 								{
 									title: 'StudyInstanceUID is regenerated randomly per instance.',
-									body: 'Every instance gets a **fresh** `generate_uid()` for its study. The archive groups by StudyInstanceUID, so it should explode into one study per slice. It only looks like "two studies" because the archive\'s ingest layer re-groups by (pseudonymised PatientID, StudyDate, AccessionNumber), which the vendor added as a "repair" feature. Re-sends after a correction land in a second group because the correction changed AccessionNumber or the batch time.',
+									body: 'Every instance gets a **fresh** `generate_uid()` for its study. The archive groups by StudyInstanceUID, so it should explode into one study per slice. It only looks like "two studies" because the archive\'s ingest layer re-groups by (pseudonymised PatientID, StudyDate, AccessionNumber) within an arrival window, which the vendor added as a "repair" feature. Re-sends after a correction arrive outside that window, so they land in a second group.',
 									confirm: 'Count distinct StudyInstanceUIDs per AccessionNumber in the research archive vs the clinical PACS. The clinical side has 1; the research side has hundreds.'
 								},
 								{
@@ -289,7 +289,7 @@ scanned and masked, with a person checking every image the scanner flags.`,
 					answer: [
 						{
 							type: 'p',
-							text: '**[[dimse|C-MOVE]] is a callback.** The gateway asks the PACS to *push* the images to the destination AE named `AIGW` ([[dicomweb]]). The PACS looks up `AIGW` in **its own** AE table and opens a **new** association to that host and port. The first error (`0xA801`) means the PACS had never heard of `AIGW`. After the admin added it, the PACS tried to connect to `10.40.9.250:11112`, and nothing arrived: "no inbound associations".'
+							text: '**[[dimse|C-MOVE]] is a callback.** The gateway asks the PACS to *push* the images to the destination AE named `AIGW`. The PACS looks up `AIGW` in **its own** AE table and opens a **new** association to that host and port. The first error (`0xA801`) means the PACS had never heard of `AIGW`. After the admin added it, the PACS tried to connect to `10.40.9.250:11112`, and nothing arrived: "no inbound associations".'
 						},
 						{
 							type: 'ranked',
@@ -344,7 +344,7 @@ scanned and masked, with a person checking every image the scanner flags.`,
 					answer: [
 						{
 							type: 'p',
-							text: '**Lossy re-compression during migration.** From batch 3 the ingest stored images with transfer syntax `.4.91` (JPEG 2000, lossy permitted), a 7× size win over lossless. Lossy compression smooths exactly the tiny, high-frequency details mammography depends on, such as [[microcalcifications|microcalcifications]]. It is not a viewer issue: the pixel data itself changed. See [[transfer-syntax]].'
+							text: '**Lossy re-compression during migration.** From batch 3 the ingest stored images with transfer syntax `.4.91` (JPEG 2000, lossy permitted), a 7× size win over the old PACS\'s JPEG Lossless (about 4× over the JPEG 2000 lossless batches 1–2). Lossy compression smooths exactly the tiny, high-frequency details mammography depends on, such as [[microcalcifications|microcalcifications]]. It is not a viewer issue: the pixel data itself changed. See [[transfer-syntax]].'
 						},
 						{
 							type: 'list',
@@ -375,16 +375,18 @@ scanned and masked, with a person checking every image the scanner flags.`,
 									{ kind: 'timeseries', title: 'Request duration p99', unit: 'ms', x: stX, series: [{ name: 'p99', points: stowDur, color: 3 }], log: true, span: 2 },
 									{
 										kind: 'table',
-										title: 'Failed requests',
+										title: 'Large requests (> 500 MB)',
 										head: ['time', 'modality', 'instances', 'body size', 'status'],
 										rows: [
 											['09:05', 'MG (DBT)', '1', '2.41 GB', '413'],
 											['09:17', 'MG (DBT)', '1', '1.96 GB', '413'],
 											['09:29', 'MG (DBT)', '1', '2.77 GB', '413'],
-											['09:41', 'CT', '1,204', '612 MB', '200']
+											['09:36', 'CT', '1,204', '612 MB', '200'],
+											['09:41', 'MG (DBT)', '1', '2.18 GB', '413'],
+											['09:53', 'MG (DBT)', '1', '2.53 GB', '413']
 										],
 										numeric: [2],
-										highlight: [0, 1, 2],
+										highlight: [0, 1, 2, 4, 5],
 										span: 6
 									}
 								]
@@ -514,7 +516,7 @@ scanned and masked, with a person checking every image the scanner flags.`,
 				},
 				{
 					id: 'glucose-units',
-					title: 'Hypoglycaemia alerts tripled overnight at one site',
+					title: 'Hypoglycaemia alerts jumped ~30× overnight at one site',
 					tag: 'tricky',
 					minutes: 6,
 					prompt: [
@@ -568,7 +570,7 @@ scanned and masked, with a person checking every image the scanner flags.`,
 								['Molar mass of glucose', '180.16 g/mol → 1 mmol = 180.16 mg'],
 								['1 mmol/L in mg/L', '180.16 mg/L'],
 								['in mg/dL (÷10)', '**18.016 mg/dL**'],
-								['6.9 mmol/L', '6.9 × 18.016 = **124.3 mg/dL** (high-normal fasting, not hypoglycaemic)'],
+								['6.9 mmol/L', '6.9 × 18.016 = **124.3 mg/dL** (above the 3.9-5.5 reference range, nowhere near hypoglycaemic)'],
 								['Alert threshold 70 mg/dL', '70 ÷ 18.016 = **3.89 mmol/L**']
 							]
 						},
@@ -860,7 +862,6 @@ OUT: "Hx of [NAME]'s disease, on carbidopa. [NAME] disease in remission.
 								['70–79', 'F', '036', 'Type 2 diabetes', '23'],
 								['90+', 'M', '036', 'Type 2 diabetes', '6'],
 								['30–39', 'F', '059', 'Erdheim–Chester disease', '1'],
-								['40–49', 'M', '021', 'HIV', '7'],
 								['40–49', 'M', '021', 'HIV', '7 (all on the same regimen, same clinic)'],
 								['97', 'F', '021', 'Hip fracture', '1']
 							]
@@ -912,7 +913,7 @@ OUT: "Hx of [NAME]'s disease, on carbidopa. [NAME] disease in remission.
 									},
 									{ kind: 'stat', title: 'Sensitivity (audit sample)', value: '90%', delta: 'unchanged', tone: 'ok' },
 									{ kind: 'stat', title: 'Specificity (audit sample)', value: '95%', delta: 'unchanged', tone: 'ok' },
-									{ kind: 'stat', title: 'Flag → confirmed', value: '12%', delta: 'was 61%', tone: 'crit' },
+									{ kind: 'stat', title: 'Flag → confirmed', value: '19%', delta: 'was 61%', tone: 'crit' },
 									{ kind: 'stat', title: 'Scanner firmware', value: 'v8.4', delta: 'updated Sep 01', tone: 'warn' }
 								]
 							}
@@ -930,13 +931,13 @@ OUT: "Hx of [NAME]'s disease, on carbidopa. [NAME] disease in remission.
 							rows: [
 								['ED (8%)', '0.08 × 0.90 = 0.072', '0.92 × 0.05 = 0.046', '0.072 / 0.118 = **61%**'],
 								['Outpatient (0.5%)', '0.005 × 0.90 = 0.0045', '0.995 × 0.05 = 0.0498', '0.0045 / 0.0543 = **8.3%**'],
-								['Mixed after rollout', '≈ 380 ED + 3,220 outpatient studies/day', '', 'observed **12%**, consistent with the mix']
+								['Mixed after rollout (380 ED + 3,220 outpatient/day)', '380 × 0.072 + 3,220 × 0.0045 ≈ 41.9', '380 × 0.046 + 3,220 × 0.0498 ≈ 177.8', '41.9 / 219.7 ≈ **19%**, matching the dashboard']
 							]
 						},
 						{
 							type: 'list',
 							items: [
-								'**Red herring:** the firmware update (Sep 01) is two days before the change and touched every site, but the audit shows sensitivity and specificity unchanged. Population is the variable that moved.',
+								'**Red herring:** the firmware update (Sep 01) is six days before the change and touched every site, but the audit shows sensitivity and specificity unchanged. Population is the variable that moved.',
 								'**Fix options:** per-setting thresholds (raise it for outpatients and accept lower sensitivity where the harm of a delay is lower), restrict the flag to settings where PPV is useful, or show a calibrated probability instead of a binary flag.',
 								'**Governance:** deploying to a new population is a new validation, not a config change. Monitor PPV per setting continuously; sensitivity can only be audited with delayed ground truth.'
 							]
@@ -1166,7 +1167,7 @@ def get_observation(request, id):
 							items: [
 								'**Fix the clocks:** NTP on devices (or PTP where needed), with a per-device offset estimated from heartbeats and corrected on ingest. Keep both the device time and the corrected time ([[clock-skew]], [[hybrid-logical-clock]]).',
 								'**Treat missing data as missing:** show "no data since 02:10" on the dashboard and alert on a silent monitor. A blank score is not a normal score.',
-								'**Recompute on late data:** treat it as [[late-arriving-data]] and use event-time windows with a watermark that re-evaluates and **alerts on retroactive threshold crossings**, explicitly marked ("deterioration detected at 02:21, reported late").',
+								'**Recompute on late data:** treat it as [[late-arriving-data]] and use event-time windows with a watermark that re-evaluates and **alerts on retroactive threshold crossings**, explicitly marked ("deterioration detected at 02:20, reported late").',
 								'**Alarm design:** a retroactive alert must reach a human differently from a live one, and not be added to the general noise ([[alarm-fatigue]]).'
 							]
 						}
@@ -1194,7 +1195,7 @@ def get_observation(request, id):
 					answer: [
 						{
 							type: 'p',
-							text: '**Evidence:** de-id CPU is at ~80% and the de-id queue stays small, while the OCR queue grows by ~500 per second. The OCR node\'s detection stats show **0.00%** hits on CT and MR, which make up 83% of the volume. The bottleneck is OCR, and it is spending almost all its capacity on images that never contain burned-in text.'
+							text: '**Evidence:** de-id CPU is at ~75% and the de-id queue stays small, while the OCR queue grows by ~500 per second. The OCR node\'s detection stats show **0.00%** hits on CT and MR, which make up 83% of the volume. The bottleneck is OCR, and it is spending almost all its capacity on images that never contain burned-in text.'
 						},
 						{
 							type: 'list',
@@ -1202,7 +1203,7 @@ def get_observation(request, id):
 								'**Trap 1, scale de-id workers:** de-id isn\'t the bottleneck, so delivered stays at 90/s and the spool fills.',
 								'**Trap 2, max out GPU nodes alone:** 6 × 45 = 270/s against 600/s arriving. Still filling, just slower (the spool fills around T+11 min instead of T+8).',
 								'**Trap 3, switch OCR off:** instant loss. Ultrasound and secondary captures with burned-in names ship to research. Throughput never justifies a PHI leak.',
-								'**Fix:** scope OCR to US, SC, OT and DOC (≈ 8% of instances, 48/s, well within 90/s), and add GPU nodes to drain the 30–40k instances already queued for OCR under the old rule. Scope alone also wins, but takes about 15 minutes to drain.',
+								'**Fix:** scope OCR to US, SC, OT and DOC (≈ 8% of instances, 48/s, well within 90/s), and add GPU nodes to drain the ~50k instances already queued for OCR under the old rule by the time the change lands. Scope alone also wins, but takes about 18 minutes to drain.',
 								'**Afterwards:** make scope a reviewed policy (which sources can carry burned-in text: by modality, manufacturer and SOP class), alert on OCR queue age, and rate-limit migration replays so they can\'t starve live clinical routing. The scanners and the replay share one spool.'
 							]
 						}
@@ -1223,7 +1224,7 @@ def get_observation(request, id):
 						{
 							type: 'list',
 							items: [
-								'**Trap, 16 round-robin threads:** throughput jumps to ~640/s, but messages for the same patient now run in parallel. A08 lands before A01, A40 before the duplicate exists. Misfiles pass 200 within about 30 seconds. Even 4 round-robin threads misfile ~100 records in two minutes.',
+								'**Trap, 16 round-robin threads:** throughput jumps to ~640/s, but messages for the same patient now run in parallel. A08 lands before A01, A40 before the duplicate exists. Misfiles pass 200 within about 30 seconds. Even 4 round-robin threads misfile ~150 records in two minutes.',
 								'**Fix:** switch dispatch to **keyed by patient (PID-3)** first, wait for it to roll out, *then* raise threads. Each patient\'s messages stay in order on one thread, and parallelism comes from different patients. Hot keys cost ~12% throughput, which is fine.',
 								'**Order of operations matters:** raising threads in the same change as the dispatch switch races the rollout. Change the safety property first, then the speed.',
 								'**What the lab simplifies:** A40 merges span two patient keys. A real engine routes the merge to the surviving patient\'s partition and waits for the retired patient\'s partition to drain first. Retries must block their own partition, never jump to a side lane.'

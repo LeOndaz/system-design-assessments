@@ -20,7 +20,7 @@ const terms: GlossaryTerm[] = [
 			{ type: 'heading', text: 'A worked example' },
 			{
 				type: 'p',
-				text: 'Ten requests took (ms): `20, 22, 23, 25, 25, 26, 28, 30, 31, 2400`. The **mean** is 263 ms, which describes none of them. The **p50 (median)** is ~25 ms, the typical experience. The **p90** is 31 ms. The **p99** is ~2400 ms: one request in a hundred is terrible.'
+				text: 'Ten requests took (ms): `20, 22, 23, 25, 25, 26, 28, 30, 31, 2400`. The **mean** is 263 ms, which describes none of them. The **p50 (median)** is ~25 ms, the typical experience. The **p90** is 31 ms (nearest-rank: the 9th of 10 sorted values; interpolating tools like numpy report ~268 ms, because with only ten samples the 2400 drags the estimate up). The **p99** is ~2400 ms: one request in a hundred is terrible.'
 			},
 			{
 				type: 'callout',
@@ -665,7 +665,7 @@ LIMIT 50;`,
 						items: [
 							'Their dedicated DB may be under-provisioned for their size.',
 							'Their own stats/indexes are stale or missing (each silo is maintained separately).',
-							'No cross-tenant contention, so if small tenants are also slow, it is not the DB.'
+							'No cross-tenant DB contention, so if small tenants are also slow at the same time, suspect the shared app tier or infra rather than the big tenant\'s database.'
 						]
 					}
 				]
@@ -684,7 +684,7 @@ LIMIT 50;`,
 				type: 'callout',
 				tone: 'info',
 				title: 'A good interview move',
-				text: 'State the model you\'re assuming out loud: "I\'ll assume a shared Postgres with tenant_id on every table; if they\'re on separate databases, hypotheses 2 and 4 drop out and I\'d look harder at per-tenant provisioning."'
+				text: 'State the model you\'re assuming out loud: "I\'ll assume a shared Postgres with tenant_id on every table; if they\'re on separate databases, the plan-flip and hot-partition hypotheses drop out and I\'d look harder at per-tenant provisioning."'
 			}
 		]
 	},

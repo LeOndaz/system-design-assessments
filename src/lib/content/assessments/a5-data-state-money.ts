@@ -351,7 +351,7 @@ const assessment: Assessment = {
 							type: 'list',
 							items: [
 								'**Fix:** [[lock-ordering|lock in a global order]]: `for id in sorted([from_id, to_id]): SELECT … FOR UPDATE`. A cycle becomes impossible.',
-								'**Also:** retry the whole transaction on [[serialization-failure|SQLSTATE]] `40P01` with jittered backoff. [[deadlock|Deadlocks]] are rare after the fix but not impossible elsewhere.',
+								'**Also:** retry the whole transaction on SQLSTATE `40P01` with jittered backoff. [[deadlock|Deadlocks]] are rare after the fix but not impossible elsewhere.',
 								"**Hot row:** the fee account is a contention point even without deadlocks. Consider posting fees to per-merchant sub-accounts and sweeping in batches.",
 								'**Red herring:** raising `deadlock_timeout` only makes Postgres wait *longer* before detecting the cycle. It never resolves one.'
 							]
@@ -868,7 +868,7 @@ That change ships next week, and I'll send a one-page note your auditor can keep
 								},
 								{
 									title: '[[connection-storm|Connection storm]] at 03:19 (`08006` and the 2,380 spike)',
-									body: 'Every connection to the old writer was cut at once. 60 pods × min 20 reconnected immediately, plus app retries. That\'s more than 2,000 connection attempts in seconds, each a forked backend doing authentication. CPU on the new writer hits 97% before it serves real traffic.'
+									body: 'Every connection to the old writer was cut at once. 60 pods × min 20 reconnected immediately, then the pools grew toward max 40 under the retry backlog (60 × 40 = 2,400). That\'s more than 2,000 connection attempts in seconds, each a forked backend doing authentication. CPU on the new writer hits 97% before it serves real traffic.'
 								}
 							]
 						},
@@ -1041,7 +1041,7 @@ report.fee = (total * 0.029).toFixed(2);`
 					answer: [
 						{
 							type: 'p',
-							text: "**[[floating-point|Binary floating point]].** `0.10` has no exact binary representation, so summing thousands of them accumulates error. `toFixed` hides it in one place, and the raw value leaks into the CSV in another. `toFixed` also rounds the *binary* value: `(1.005).toFixed(2)` is `\"1.00\"`, and `(0.125 * 3).toFixed(2)` depends on the representation. Those are the one-cent differences."
+							text: "**[[floating-point|Binary floating point]].** `0.10` has no exact binary representation, so summing thousands of them accumulates error. `toFixed` hides it in one place, and the raw value leaks into the CSV in another. `toFixed` also rounds the *binary* value: `(1.005).toFixed(2)` is `\"1.00\"` and `(2.675).toFixed(2)` is `\"2.67\"`, because both are stored just below the half. Those are the one-cent differences."
 						},
 						{
 							type: 'list',
@@ -1718,8 +1718,8 @@ def test_invariants_hold_after_many_transfers(ledger):
 									body: "If `dst` doesn't exist, `self.balances[dst]` raises `KeyError` **after** `src` was already debited. The money is gone and no entry explains it. Always validate everything before the first mutation."
 								},
 								{
-									title: 'Replay returns "posted" for anything',
-									body: 'A replay of a different request under the same key silently "succeeds". So does a replay of a transfer that was *rejected*, so the client believes money moved when it didn\'t.'
+									title: 'Replay returns "posted" for any request',
+									body: 'A replay of a different request (other amount, other accounts) under an already-posted key silently "succeeds", so the client believes the new transfer moved money when it didn\'t.'
 								},
 								{
 									title: 'Rejected transfers aren\'t recorded',

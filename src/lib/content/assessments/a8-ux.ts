@@ -33,8 +33,8 @@ const clsApac = shape(28, { base: 0.05, noise: 0.08, seed: 23, round: 3 });
 const adRevenue = shape(28, { base: 100, noise: 0.05, seed: 24 });
 
 // Peeking: cumulative p-value and observed lift over 28 days.
-const pval = shape(28, { base: 0.5, noise: 0.18, seed: 31, round: 3 }, ramp(0, 5, 0.55, 0.035), ramp(5, 13, 0.04, 0.4), ramp(13, 28, 0.4, 0.58));
-const liftCum = shape(28, { base: 0, noise: 0.15, seed: 32, round: 1 }, ramp(0, 5, 9, 6.5), ramp(5, 28, 6.5, 0.6));
+const pval = shape(28, { base: 0.5, noise: 0.18, seed: 31, round: 3 }, ramp(0, 4, 0.55, 0.035), ramp(5, 13, 0.04, 0.4), ramp(13, 28, 0.4, 0.58));
+const liftCum = shape(28, { base: 0, noise: 0.15, seed: 32, round: 1 }, ramp(0, 4, 9, 6.5), ramp(4, 28, 6.5, 0.6));
 
 // Novelty effect: weekly nav clicks per user, 6 weeks.
 const weeks = ['wk 1', 'wk 2', 'wk 3', 'wk 4', 'wk 5', 'wk 6'];
@@ -876,7 +876,7 @@ const assessment: Assessment = {
 									{
 										kind: 'text',
 										text: 'Statt 1,499.00 €',
-										issue: 'Mixed formats: the line above uses German separators ("1.299,00 €"), this one uses US separators with a German symbol position. Someone concatenated `price.toFixed(2)` with "€". Format every amount with `Intl.NumberFormat(locale, { style: "currency" })` ([[locale-formatting]]).'
+										issue: 'Mixed formats: the line above uses German separators ("1.299,00 €"), this one uses US separators with a German symbol position. Someone formatted the number with a hard-coded US locale (`price.toLocaleString("en-US", { minimumFractionDigits: 2 })`) and appended "€". Format every amount with `Intl.NumberFormat(locale, { style: "currency" })` ([[locale-formatting]]).'
 									},
 									{
 										kind: 'text',
@@ -915,7 +915,7 @@ const assessment: Assessment = {
 						{
 							type: 'callout',
 							tone: 'info',
-							text: 'Root cause for three of the four: money is formatted by string concatenation. One `formatMoney(amount, currency, locale)` helper fixes a class of bugs, not just this screen.'
+							text: 'Root cause for the two money-display bugs: amounts are rendered as hand-built strings instead of an amount plus a currency. One `formatMoney(amount, currency, locale)` helper fixes a class of bugs, not just this screen. The total mismatch is a separate pricing-logic bug.'
 						}
 					]
 				}
@@ -1209,7 +1209,7 @@ const [filled, setFilled] = useState({ email: false, password: false });
 								'Use the [[third-party-cookie-blocking|Storage Access API]] (`document.requestStorageAccess()` after a user gesture), or',
 								'Open authentication in a top-level popup/window and pass a short-lived token to the iframe, kept in memory (not a cookie), or',
 								'Serve the embed from a subdomain of the partner (first-party) via [[cname-record|CNAME]], or use partitioned cookies (CHIPS: `Partitioned`) where supported.',
-								'Chrome is phasing in similar restrictions, so "works in Chrome" is temporary.'
+								'Don\'t treat "works in Chrome" as safe: Google dropped its default-blocking plan, but Chrome users can still block third-party cookies (Incognito does by default), so design for the blocked case.'
 							]
 						}
 					]
@@ -1409,7 +1409,7 @@ return <>
 				},
 				{
 					id: 'v3',
-					title: 'CLS on checkout tripled, only in Europe',
+					title: 'CLS on checkout jumped 4x, only in Europe',
 					tag: 'tricky',
 					minutes: 5,
 					prompt: [
@@ -1454,7 +1454,7 @@ return <>
 					answer: [
 						{
 							type: 'p',
-							text: '**The consent banner (shown only to EU visitors) is inserted at the top of the page after load and pushes everything down** (a [[cls|layout shift]]), including the Place Order button, so users mis-tap. The font change adds a smaller shift for everyone. Ads are a red herring: there are no ads on checkout, and the ad index didn\'t move.'
+							text: '**The consent banner (shown only to EU visitors) is inserted at the top of the page after load and pushes everything down** (a [[cls|layout shift]]), including the Place Order button, so users mis-tap. The font swap adds a smaller second shift on top. Ads are a red herring: there are no ads on checkout, and the ad index didn\'t move.'
 						},
 						{
 							type: 'list',
@@ -1511,7 +1511,7 @@ return <>
 					answer: [
 						{
 							type: 'p',
-							text: '**[[peeking|Peeking]].** The team checked 23 times and stopped the first time p dipped below 0.05 (day 5), at a fraction of the planned sample. Early lifts are noisy and big; by the planned sample size (day 21) the lift has regressed to ~1% and p ≈ 0.5. The "+6.5%" was mostly noise. The split is fine (SRM passes), so the randomization isn\'t the problem; the stopping rule is.'
+							text: '**[[peeking|Peeking]].** The team checked 23 times and stopped the first time p dipped below 0.05 (day 5), at a fraction of the planned sample. Early lifts are noisy and big; by the planned sample size (day 21) the lift has shrunk to ~2.5% (and keeps sliding toward ~1%) and p ≈ 0.5. The "+6.5%" was mostly noise. The split is fine (SRM passes), so the randomization isn\'t the problem; the stopping rule is.'
 						},
 						{
 							type: 'list',

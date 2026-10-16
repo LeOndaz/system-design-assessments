@@ -39,7 +39,11 @@ export type Block =
 	/** Interactive simulated cloud console. See `Lab`. */
 	| { type: 'lab'; lab: Lab }
 	/** A mock UI screen; in `spot` mode the reader clicks elements they think are wrong. */
-	| { type: 'mock'; mock: MockScreen };
+	| { type: 'mock'; mock: MockScreen }
+	/** A pull-request style diff; in `review` mode the reader clicks lines to flag. */
+	| { type: 'diff'; diff: CodeDiff }
+	/** An interactive sandboxed shell over a fake filesystem. See src/lib/terminal. */
+	| { type: 'terminal'; terminal: TerminalScenario };
 
 export interface RankedItem {
 	title: Rich;
@@ -502,4 +506,105 @@ export interface MockEl {
 	issue?: Rich;
 	/** Looks wrong but isn't; explained after checking. */
 	decoy?: Rich;
+}
+
+// ───────────────────────── code review ─────────────────────────
+
+export interface CodeDiff {
+	/** PR title. */
+	title: string;
+	/** PR description / context, shown above the files. */
+	description?: Rich;
+	author?: string;
+	/** `review`: reader flags lines, then checks against planted notes. */
+	mode?: 'review' | 'view';
+	files: DiffFile[];
+}
+
+export interface DiffFile {
+	path: string;
+	lang?: string;
+	/** First line numbers of the hunk in the old / new file (default 1). */
+	oldStart?: number;
+	newStart?: number;
+	/**
+	 * Unified-diff body: every line starts with ' ' (context), '+' (added) or '-' (removed).
+	 * A line `@@ … @@` starts a new hunk: `@@ -oldStart,+newStart @@ optional heading`.
+	 */
+	patch: string;
+	/** Planted review notes, anchored to the single line containing `match`. */
+	notes?: DiffNote[];
+}
+
+export interface DiffNote {
+	/** Unique substring of exactly one line in this file's patch. */
+	match: string;
+	/** A real problem. */
+	issue?: Rich;
+	/** Looks suspicious but is fine; explain why. */
+	decoy?: Rich;
+	severity?: 'blocker' | 'major' | 'minor' | 'nit';
+}
+
+// ───────────────────────── terminal ─────────────────────────
+
+export interface TermCtx {
+	cwd: string;
+	env: Record<string, string>;
+	/** Piped input from the previous command. */
+	stdin: string;
+	fs: {
+		read: (path: string) => string | null;
+		write: (path: string, content: string) => void;
+		exists: (path: string) => boolean;
+		isDir: (path: string) => boolean;
+		list: (dir: string) => string[];
+		resolve: (path: string) => string;
+	};
+	/** Scenario-owned mutable state (e.g. which pods were restarted). */
+	state: Record<string, unknown>;
+}
+
+export interface TermResult {
+	out?: string;
+	err?: string;
+	/** Exit code; non-zero stops `&&` chains. */
+	code?: number;
+}
+
+export type ScenarioCommand = (args: string[], ctx: TermCtx) => TermResult | string;
+
+export interface TerminalScenario {
+	/** Window title, e.g. "ssh ops@api-7f9c". */
+	title?: string;
+	user?: string;
+	host?: string;
+	/** Starting directory. Default /home/<user>. */
+	cwd?: string;
+	/** Printed on start. */
+	motd?: string;
+	/** Absolute path → file content. Parent directories are created automatically. */
+	files: Record<string, string>;
+	/** Extra empty directories. */
+	dirs?: string[];
+	env?: Record<string, string>;
+	/** Scenario commands (kubectl, psql, dig, aws, docker, systemctl, journalctl…). Use helpers in src/lib/terminal/scenario.ts. */
+	commands?: Record<string, ScenarioCommand>;
+	/** Initial scenario state for commands that mutate things. */
+	state?: Record<string, unknown>;
+	/** Shown above the terminal. */
+	task?: Rich;
+	/** `submit <answer>` checks the reader's answer. */
+	answer?: {
+		/** What to submit, e.g. "the pod name" or "the offending IP". */
+		prompt: string;
+		/** true = correct; a string = feedback for a wrong answer. */
+		check: (answer: string, state: Record<string, unknown>) => true | string;
+		/** Printed on success. */
+		success?: string;
+	};
+	/** Validator: these commands run in order; none may throw, and if `answer` exists the last must be a passing `submit`. */
+	solution: string[];
+	/** Suggested commands shown as hint chips. */
+	hints?: string[];
 }
