@@ -58,7 +58,7 @@ const a1: Assessment = {
 								'Missing [[database-index|index]] / [[query-plan-flip|plan regression]] after stats change',
 								'[[n-plus-one|N+1 queries]], unbounded `SELECT`, `OFFSET` paging',
 								'Lock contention, long transactions',
-								'[[connection-pool|Connection pool]] exhausted (pods × pool > max_connections)',
+								'[[connection-pool|Connection pool]] exhausted ([[kubernetes|pods]] × pool > max_connections)',
 								'[[replication-lag|Replication lag]] on read replicas, vacuum / [[table-bloat|bloat]]'
 							]
 						},
@@ -123,7 +123,7 @@ const a1: Assessment = {
 								'[[percentiles|p95]] latency on *all* endpoints went from 180 ms to 6 s since 14:00. No deploy.',
 								'DB CPU 25%, cache hit rate unchanged at 94%.',
 								'Timing diagram: only `/checkout` calls the payment API; that span went from 120 ms to 5 s.',
-								'Backend worker pool shows 64/64 busy.'
+								'Backend [[worker-pool|worker pool]] shows 64/64 busy.'
 							]
 						}
 					],
@@ -142,7 +142,7 @@ const a1: Assessment = {
 									confirm: 'Outbound request count vs inbound checkout count.'
 								},
 								{
-									title: 'Outbound connection pool limit',
+									title: 'Outbound [[connection-pool|connection pool]] limit',
 									body: 'e.g. HTTP client max 10 connections per host. Requests wait for a socket, not the provider.',
 									confirm: 'Client-side pool wait metric vs provider-reported latency.'
 								}
@@ -163,7 +163,7 @@ const a1: Assessment = {
 						{
 							type: 'list',
 							items: [
-								'Deploy at 09:00. [[cache-hit-rate|Hit rate]] 96% → 35%. DB QPS ×12, DB p95 30 ms → 900 ms.',
+								'Deploy at 09:00. [[cache-hit-rate|Hit rate]] 96% → 35%. DB [[throughput|QPS]] ×12, DB p95 30 ms → 900 ms.',
 								'Latency slowly recovers over ~1 hour but never fully.'
 							]
 						}
@@ -199,7 +199,7 @@ const a1: Assessment = {
 					id: 'p1q3',
 					title: 'Spikes on the hour, every hour',
 					tag: 'core',
-					prompt: [{ type: 'list', items: ['p99 jumps for ~3 minutes at :00 each hour. Rest of the hour is normal.'] }],
+					prompt: [{ type: 'list', items: ['[[percentiles|p99]] jumps for ~3 minutes at :00 each hour. Rest of the hour is normal.'] }],
 					answer: [
 						{
 							type: 'ranked',
@@ -211,8 +211,8 @@ const a1: Assessment = {
 								},
 								{
 									title: 'Scheduled job',
-									body: 'Reports, ETL, backups, materialized-view refresh competing for DB I/O or locks.',
-									confirm: 'Cron schedules, DB active queries at :00.'
+									body: 'Reports, [[etl|ETL]], backups, materialized-view refresh competing for DB I/O or locks.',
+									confirm: '[[cron|Cron]] schedules, DB active queries at :00.'
 								},
 								{
 									title: 'Third-party quota window reset or token refresh',
@@ -243,7 +243,7 @@ const a1: Assessment = {
 									confirm: '[[explain-analyze|`EXPLAIN ANALYZE`]]; rows scanned vs returned.'
 								},
 								{
-									title: 'OFFSET pagination',
+									title: '[[offset-pagination|OFFSET pagination]]',
 									body: 'Deep pages scan and discard rows. Fix with [[keyset-pagination|keyset pagination]] (`WHERE id < :cursor ORDER BY id DESC LIMIT 50`).'
 								},
 								{
@@ -279,7 +279,7 @@ const a1: Assessment = {
 						},
 						{
 							type: 'p',
-							text: '**Fix:** [[pgbouncer|PgBouncer]] / RDS Proxy (transaction pooling), size pool per pod = budget ÷ max pods, [[read-replica|read replicas]] for reads, cache hot reads. Also set the HPA max based on downstream capacity, not only CPU.'
+							text: '**Fix:** [[pgbouncer|PgBouncer]] / RDS Proxy (transaction pooling), size pool per pod = budget ÷ max pods, [[read-replica|read replicas]] for reads, cache hot reads. Also set the [[horizontal-pod-autoscaler|HPA]] max based on downstream capacity, not only CPU.'
 						}
 					]
 				},
@@ -291,7 +291,7 @@ const a1: Assessment = {
 						{
 							type: 'list',
 							items: [
-								'Server p95 is 120 ms. Real-user TTI is 7 s on the dashboard page. The frontend fetches user → org → projects → stats.'
+								'Server p95 is 120 ms. [[tti|Real-user TTI]] is 7 s on the dashboard page. The frontend fetches user → org → projects → stats.'
 							]
 						}
 					],
@@ -301,7 +301,7 @@ const a1: Assessment = {
 							items: [
 								{
 									title: '[[request-waterfall|Request waterfall]].',
-									body: 'Four dependent round-trips × (RTT + TLS + server time). On mobile at 300 ms RTT that alone is seconds.',
+									body: 'Four dependent round-trips × ([[rtt|RTT]] + TLS + server time). On mobile at 300 ms RTT that alone is seconds.',
 									confirm: 'Browser network waterfall. Fix: parallelize independent calls, a [[bff]] / aggregate endpoint, or prefetch on the server.'
 								},
 								{ title: 'Large JS bundle / render-blocking assets.', confirm: 'Lighthouse, coverage tab.' },
@@ -381,7 +381,7 @@ const a1: Assessment = {
 					answer: [
 						{
 							type: 'p',
-							text: '**[[memory-leak|Memory leak]] → [[gc-pause|GC]] pressure.** Unbounded in-process cache (a `dict` without eviction), listeners not removed, request-scoped objects held globally. Longer and more frequent GC pauses raise latency until OOM-kill or restart. Confirm: heap dumps at 1 h and 5 h, compare dominant retainers. Other candidates: connection leak (pool slowly drained), file-descriptor leak.'
+							text: '**[[memory-leak|Memory leak]] → [[gc-pause|GC]] pressure.** Unbounded in-process cache (a `dict` without eviction), listeners not removed, request-scoped objects held globally. Longer and more frequent GC pauses raise latency until [[oomkilled|OOM-kill]] or restart. Confirm: [[profiling|heap dumps]] at 1 h and 5 h, compare dominant retainers. Other candidates: connection leak (pool slowly drained), file-descriptor leak.'
 						}
 					]
 				}
@@ -414,7 +414,7 @@ const a1: Assessment = {
 				{
 					id: 'p2q1',
 					group: 'Bug-hunt drills',
-					title: '"Some of our CRM contacts never arrive"',
+					title: '"Some of our [[crm|CRM]] contacts never arrive"',
 					tag: 'core',
 					prompt: [
 						{
@@ -429,7 +429,7 @@ const a1: Assessment = {
 					answer: [
 						{
 							type: 'p',
-							text: "**Pagination is ignored.** Only the first 100 contacts are fetched; the response's `next_cursor` / `has_more` is never followed. Customers with fewer than 100 contacts never notice, which is why only some report it."
+							text: "**[[keyset-pagination|Pagination]] is ignored.** Only the first 100 contacts are fetched; the response's `next_cursor` / `has_more` is never followed. Customers with fewer than 100 contacts never notice, which is why only some report it."
 						},
 						{
 							type: 'code',
@@ -475,7 +475,7 @@ def charge(order):
 						},
 						{
 							type: 'p',
-							text: '**Fix:** send `Idempotency-Key: order-{id}` (stable per logical operation), or check for an existing charge before retrying. Persist a `pending` state before the call so a crash between charge and `mark_paid` can be reconciled. **Remediation:** query the provider for duplicate charges per order since the decorator was added and refund.'
+							text: '**Fix:** send `Idempotency-Key: order-{id}` (stable per logical operation), or check for an existing charge before retrying. Persist a `pending` state before the call so a crash between charge and `mark_paid` can be [[reconciliation|reconciled]]. **Remediation:** query the provider for duplicate charges per order since the decorator was added and refund.'
 						}
 					]
 				},
@@ -521,7 +521,7 @@ db.save_invoice(id=inv_id, amount_usd=amount)`
 					answer: [
 						{
 							type: 'p',
-							text: '**Unit mismatch**: cents stored in a dollars column. Fix: keep money as integer [[minor-units]] end to end (`amount_cents`) and name columns by unit. Watch for zero-decimal currencies (JPY) and 3-decimal ones (KWD, BHD) if converting.'
+							text: '**Unit mismatch**: cents stored in a dollars column. Fix: keep money as integer [[minor-units]] end to end (`amount_cents`) and name columns by unit. Watch for [[zero-decimal-currency|zero-decimal currencies]] (JPY) and 3-decimal ones (KWD, BHD) if converting.'
 						}
 					]
 				},
@@ -591,7 +591,7 @@ const visible = rows.filter(r => selected.includes(r.projectId));        // proj
 				{
 					id: 'p2q8',
 					group: 'Bug-hunt drills',
-					title: '"Webhook updates sometimes revert a record"',
+					title: '"[[webhook|Webhook]] updates sometimes revert a record"',
 					tag: 'tricky',
 					prompt: [
 						{
@@ -607,7 +607,7 @@ def on_order(evt):
 					answer: [
 						{
 							type: 'p',
-							text: "**[[out-of-order-delivery|Out-of-order]] and duplicate delivery.** Providers don't guarantee order; a delayed `processing` event arrives after `shipped` and overwrites it. Also read-modify-write [[race-condition|races]] between concurrent deliveries."
+							text: "**[[out-of-order-delivery|Out-of-order]] and duplicate delivery.** Providers don't guarantee order; a delayed `processing` event arrives after `shipped` and overwrites it. Also [[lost-update|read-modify-write]] [[race-condition|races]] between concurrent deliveries."
 						},
 						{
 							type: 'p',
@@ -714,7 +714,7 @@ I'll send the final list of affected orders by end of day.`
 							'Transcription model changed, new accent/language, drug names misheard, audio truncated, [[diarization]] swaps agent and caller',
 							"Wrong drug names, side effects attributed to the agent's script"
 						],
-						['Cleaning / PII', '[[pii-redaction|Over-redaction]] removes drug names or dosages; regex changes', 'Missing or vague facts'],
+						['Cleaning / [[pii|PII]]', '[[pii-redaction|Over-redaction]] removes drug names or dosages; regex changes', 'Missing or vague facts'],
 						[
 							'[[chunking|Chunking]]',
 							'Size/overlap changed, negation split from symptom ("denies… / …nausea"), speaker labels lost',
@@ -737,7 +737,7 @@ I'll send the final list of affected orders by end of day.`
 						],
 						[
 							'Prompt / LLM',
-							'Unpinned model alias updated ([[model-pinning]]), prompt edited, [[context-window|context]] overflow truncates instructions, temperature raised',
+							'Unpinned model alias updated ([[model-pinning]]), prompt edited, [[context-window|context]] overflow truncates instructions, [[llm-temperature|temperature]] raised',
 							'Unsupported content, format drift'
 						],
 						[
@@ -815,7 +815,7 @@ I'll send the final list of affected orders by end of day.`
 					id: 'p3q3',
 					title: '"Patient reports nausea", but the patient denied it',
 					tag: 'core',
-					prompt: [{ type: 'list', items: ['Chunk size was reduced from 800 to 256 tokens with 0 overlap to cut costs.'] }],
+					prompt: [{ type: 'list', items: ['Chunk size was reduced from 800 to 256 [[llm-token|tokens]] with 0 overlap to cut costs.'] }],
 					answer: [
 						{
 							type: 'p',
@@ -844,7 +844,7 @@ I'll send the final list of affected orders by end of day.`
 						},
 						{
 							type: 'p',
-							text: '**Fix:** trigger summarization on an "indexed" event carrying the expected chunk count, filter retrieval by `call_id` not patient, and fail closed if zero chunks for that call are found. Add idempotent job keys so retries don\'t produce duplicates.'
+							text: '**Fix:** trigger summarization on an "indexed" event carrying the expected chunk count, filter retrieval by `call_id` not patient, and [[fail-open-closed|fail closed]] if zero chunks for that call are found. Add idempotent job keys so retries don\'t produce duplicates.'
 						}
 					]
 				},
@@ -859,7 +859,7 @@ I'll send the final list of affected orders by end of day.`
 							items: [
 								{
 									title: '[[data-drift|Data drift]]',
-									body: 'New drug launched (names not in ASR vocabulary), new call scripts, new language mix, longer calls.',
+									body: 'New drug launched (names not in [[asr|ASR]] vocabulary), new call scripts, new language mix, longer calls.',
 									confirm: 'Compare distributions (call length, language, out-of-vocabulary terms) month over month.'
 								},
 								{
@@ -904,7 +904,7 @@ I'll send the final list of affected orders by end of day.`
 								'**Traceability:** log for each summary the transcript id, chunk ids, retrieval scores, prompt version, model id, embedding version.',
 								'**Structured output with citations:** each extracted side effect must cite a transcript span; a validator rejects any entity not present in the cited text.',
 								"**Isolation assertions:** every retrieved chunk's tenant must equal the request tenant; violation = hard fail + alert.",
-								'**Evals:** [[golden-eval-set|golden set]] with expected extractions; precision/recall per side effect; faithfulness score; run in CI on prompt/model changes and nightly.',
+								'**Evals:** [[golden-eval-set|golden set]] with expected extractions; [[recall-precision|precision/recall]] per side effect; faithfulness score; run in CI on prompt/model changes and nightly.',
 								'**Human review** for low-confidence or serious adverse events (a regulatory requirement anyway).'
 							]
 						}
@@ -952,7 +952,7 @@ user = { id, name, customer_id,
 							items: [
 								'(a) one user active all month',
 								'(b) one user activated Jan 15, still active',
-								'(c) one user deactivated Jan 10 (inclusive), activated last year',
+								'(c) one user deactivated Jan 10 ([[inclusive-exclusive|inclusive]]), activated last year',
 								'(d) Feb 2020, user activated Feb 29',
 								'(e) one user activated Jan 31',
 								'(f) April 2019, active Apr 15–Apr 20 inclusive'
@@ -1061,7 +1061,7 @@ def monthly_charge(month: str,
 						},
 						{
 							type: 'p',
-							text: '**Complexity:** O(U) time, O(1) extra space, thanks to [[interval-overlap|interval overlap]]. The naive "loop every day, count active users" version is O(D × U). Both are fine for the expected input sizes; mention the trade-off. Some graders expect to see day-loop helpers (`first_day_of_month`, `next_day`) because the starter suggests them. If the starter ships those helpers, use them and note the faster interval-overlap approach in a comment.'
+							text: '**Complexity:** [[big-o-notation|O(U)]] time, O(1) extra space, thanks to [[interval-overlap|interval overlap]]. The naive "loop every day, count active users" version is O(D × U). Both are fine for the expected input sizes; mention the trade-off. Some graders expect to see day-loop helpers (`first_day_of_month`, `next_day`) because the starter suggests them. If the starter ships those helpers, use them and note the faster interval-overlap approach in a comment.'
 						}
 					]
 				},
@@ -1120,7 +1120,7 @@ export function monthlyCharge(month: string, subscription: Subscription | null, 
 						{
 							type: 'callout',
 							tone: 'warn',
-							text: 'JS traps: months are 0-indexed in `Date.UTC`; `new Date("2019-01-15")` parses as UTC but `new Date(2019, 0, 15)` is local; calling `getDate()` on a UTC-parsed date in UTC−5 gives the 14th.'
+							text: 'JS traps: months are 0-indexed in `Date.UTC`; `new Date("2019-01-15")` parses as [[utc|UTC]] but `new Date(2019, 0, 15)` is local; calling `getDate()` on a UTC-parsed date in UTC−5 gives the 14th.'
 						}
 					]
 				},
@@ -1284,7 +1284,7 @@ return round(total)`
 				},
 				{
 					id: 't3',
-					title: 'Tail at scale',
+					title: '[[tail-latency|Tail at scale]]',
 					tag: 'teaser',
 					prompt: [
 						{
@@ -1312,7 +1312,7 @@ return round(total)`
 					answer: [
 						{
 							type: 'p',
-							text: '(1+3)³ = **64** calls. Retry only at one layer, with a retry budget, backoff and jitter. See [[retry-storm]].'
+							text: '(1+3)³ = **64** calls. Retry only at one layer, with a [[retry-budget|retry budget]], backoff and jitter. See [[retry-storm]].'
 						}
 					]
 				},
@@ -1336,7 +1336,7 @@ return round(total)`
 					answer: [
 						{
 							type: 'p',
-							text: 'Pagination (big accounts), timezone (users in certain zones/hours), case/encoding (non-ASCII names, mixed-case emails), feature flag/plan tier, race conditions under concurrency, locale number formats (`1.234,56`), data created before a migration.'
+							text: 'Pagination (big accounts), timezone (users in certain zones/hours), case/encoding (non-ASCII names, mixed-case emails), feature flag/plan tier, race conditions under concurrency, [[locale-formatting|locale number formats]] (`1.234,56`), data created before a migration.'
 						}
 					]
 				},
@@ -1348,7 +1348,7 @@ return round(total)`
 					answer: [
 						{
 							type: 'p',
-							text: 'The **retrieved chunk texts/ids** for that request. If the wrong fact is in the context → retrieval/ingestion problem. If not → the LLM produced it ([[hallucination]] or prompt issue).'
+							text: 'The **retrieved [[chunking|chunk texts/ids]]** for that request. If the wrong fact is in the context → retrieval/ingestion problem. If not → the LLM produced it ([[hallucination]] or prompt issue).'
 						}
 					]
 				},
@@ -1372,7 +1372,7 @@ return round(total)`
 					answer: [
 						{
 							type: 'p',
-							text: 'Probably not. The whole transcript fits in context. Retrieval only adds failure modes (missed chunks, cross-call contamination). [[rag|RAG]] makes sense for questions across many calls or lookups against a drug reference database. Raising this shows architectural judgment.'
+							text: 'Probably not. The whole transcript fits in [[context-window|context]]. Retrieval only adds failure modes (missed chunks, cross-call contamination). [[rag|RAG]] makes sense for questions across many calls or lookups against a drug reference database. Raising this shows architectural judgment.'
 						}
 					]
 				},

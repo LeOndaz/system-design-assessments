@@ -43,7 +43,7 @@ Is the ledger corrupted? We need to close by Friday.`
 				{
 					type: 'code',
 					lang: 'python',
-					caption: 'How the reporting job builds the USD trial balance',
+					caption: 'How the reporting job builds the USD [[trial-balance|trial balance]]',
 					code: `for acct in accounts:
     for line in acct.lines(period="2026-09"):
         usd = line.amount * fx.rate(line.currency, "USD", at=period_end)  # month-end rate
@@ -53,7 +53,7 @@ Is the ledger corrupted? We need to close by Friday.`
 			answer: [
 				{
 					type: 'p',
-					text: 'Not corruption. **An [[fx-revaluation]] entry is missing**, and the report hides it by revaluing some lines but not their counterparts.'
+					text: 'Not corruption. In [[double-entry-bookkeeping|double-entry]] books, debits ≠ credits means some posting is one-sided. **An [[fx-revaluation]] entry is missing**, and the report hides it by revaluing some lines but not their counterparts.'
 				},
 				{
 					type: 'p',
@@ -78,7 +78,7 @@ Is the ledger corrupted? We need to close by Friday.`
 			prompt: [
 				{
 					type: 'p',
-					text: 'A US customer buys three €10.00 add-ons; we display and charge in USD at our rate **1.08745**. The invoice shows each line converted and the total converted separately. Support says customers complain the lines sum to $32.61 but they were charged $32.62. The PSP then settles our USD charge into EUR at its own rate, and the ledger posts each line separately.'
+					text: 'A US customer buys three €10.00 add-ons; we display and charge in USD at our rate **1.08745**. The invoice shows each line converted and the total converted separately. Support says customers complain the lines sum to $32.61 but they were charged $32.62. The PSP then [[settlement|settles]] our USD charge into EUR at its own rate, and the ledger posts each line separately.'
 				},
 				{ type: 'list', items: ['What are the exact numbers?', 'Which figure is "right"?', 'How do you make the invoice, the charge and the ledger agree, permanently?'] }
 			],
@@ -110,7 +110,7 @@ Is the ledger corrupted? We need to close by Friday.`
 			prompt: [
 				{
 					type: 'p',
-					text: 'Every transfer credits the platform fee account (`accounts.id = 1`) in the same transaction as the customer debit. Throughput plateaus at ~650 transfers/s during a promotion. The team scaled the DB from 16 to 32 vCPU at 12:05. p99 kept climbing.'
+					text: 'Every transfer credits the platform fee account (`accounts.id = 1`) in the same transaction as the customer debit. Throughput plateaus at ~650 transfers/s during a promotion. The team scaled the DB from 16 to 32 vCPU at 12:05. [[percentiles|p99]] kept climbing.'
 				},
 				{
 					type: 'dashboard',
@@ -185,7 +185,7 @@ Is the ledger corrupted? We need to close by Friday.`
 					type: 'ranked',
 					items: [
 						{ title: 'Shorten the lock hold.', body: 'Update the hot row last, right before commit, with no network calls after it. Cuts the hold time, raises the ceiling, does not remove it.' },
-						{ title: 'Shard the account.', body: 'Split the fee account into N sub-accounts (`fee:0…fee:15`), pick one by hash of the transfer id; the reported balance is the sum. 16 shards ≈ 16× the ceiling.' },
+						{ title: '[[sharding|Shard]] the account.', body: 'Split the fee account into N sub-accounts (`fee:0…fee:15`), pick one by hash of the transfer id; the reported balance is the sum. 16 shards ≈ 16× the ceiling.' },
 						{
 							title: 'Don\'t update a balance on the hot path at all.',
 							body: 'Insert immutable entry rows (append-only, no contention) and maintain the fee balance by periodic aggregation. Safe for accounts that are only credited; customer accounts that can\'t go negative still need a checked update (next question).'
@@ -226,11 +226,11 @@ COMMIT;`
 					items: [
 						{
 							title: '(b) does not work.',
-							body: '`FOR UPDATE` locks rows that exist. When there are no active holds, there is nothing to lock; the conflicting row is the one being inserted (a phantom). It can\'t be locked in advance.'
+							body: '`FOR UPDATE` ([[select-for-update|SELECT … FOR UPDATE]]) locks rows that exist. When there are no active holds, there is nothing to lock; the conflicting row is the one being inserted (a phantom). It can\'t be locked in advance.'
 						},
 						{
 							title: '(a) works, at a price.',
-							body: '`SERIALIZABLE` detects the dependency and aborts one transaction with a [[serialization-failure]]. Correct, but every caller must retry, and under load the abort rate climbs.'
+							body: '`SERIALIZABLE` (the strictest [[isolation-level|isolation level]]) detects the dependency and aborts one transaction with a [[serialization-failure]]. Correct, but every caller must retry, and under load the abort rate climbs.'
 						},
 						{
 							title: 'Best: make the invariant a single-row condition.',
@@ -252,7 +252,7 @@ COMMIT;`
 			prompt: [
 				{
 					type: 'p',
-					text: 'Balances are [[event-sourced-ledger|event-sourced]]. A bug fix required rebuilding all projections from events. After the rebuild, account `w_4417` shows **$322.90**; the old projection said **$1,550.50**, and the customer agrees with the old number. In 2023 the `Deposited` event changed shape.'
+					text: 'Balances are [[event-sourced-ledger|event-sourced]]. A bug fix required rebuilding all [[cqrs-read-model|projections]] from events. After the rebuild, account `w_4417` shows **$322.90**; the old projection said **$1,550.50**, and the customer agrees with the old number. In 2023 the `Deposited` event changed shape.'
 				},
 				{
 					type: 'columns',
@@ -293,7 +293,7 @@ v2 Deposited {"amount_minor": 31050}  2024-06-30`
 				},
 				{
 					type: 'p',
-					text: 'The old projection was right only because it was built incrementally by the code that existed when each event arrived. **Fix:** explicit [[event-upcasting|upcasters]] per event version (`v1 → v2: amount_minor = round_half_up(amount × 100)`, converting through Decimal, never float), a version field on every event, and a rebuild that runs in shadow and diffs against the live projection before cut-over. Any account whose balance changes in a rebuild should be a reviewed exception, not a silent overwrite.'
+					text: 'The old projection was right only because it was built incrementally by the code that existed when each event arrived. **Fix:** explicit [[event-upcasting|upcasters]] per event version (`v1 → v2: amount_minor = round_half_up(amount × 100)`, converting through [[decimal-arithmetic|Decimal]], never float), a version field on every event, and a rebuild that runs in shadow and diffs against the live projection before cut-over. Any account whose balance changes in a rebuild should be a reviewed exception, not a silent overwrite.'
 				}
 			]
 		},

@@ -199,7 +199,7 @@ const assessment: Assessment = {
 								{
 									title: '[[lock-queue|Lock queue]] behind a long-running report',
 									body: '`ALTER TABLE` needs an `ACCESS EXCLUSIVE` lock. The 53-minute Metabase report (pid 4127) holds `ACCESS SHARE` on `orders`, so the ALTER waits. Postgres grants locks in queue order, so every later `SELECT`/`INSERT` lines up **behind the ALTER** (blocked_by `{9981}`), even though it would have been compatible with the report. Waiting sessions climb to 431, connections hit `max_connections`, and the app\'s 30 s timeout fires.',
-									confirm: "`pg_blocking_pids(9981)` returns `{4127}`, and the API sessions return `{9981}`. That's exactly the snapshot."
+									confirm: "`pg_blocking_pids(9981)` returns `{4127}`, and the API sessions return `{9981}`. That's exactly the [[pg-stat-activity]] snapshot."
 								},
 								{
 									title: 'Connection exhaustion as a *consequence*',
@@ -219,7 +219,7 @@ const assessment: Assessment = {
 						{
 							type: 'list',
 							items: [
-								"**Fix the migration runner:** `SET lock_timeout = '3s'` before every DDL statement, and retry with backoff. A migration that can't get its lock in 3 s fails quietly instead of taking the site down. See [[lock-timeout]].",
+								"**Fix the migration runner:** `SET lock_timeout = '3s'` before every [[ddl]] statement, and retry with backoff. A migration that can't get its lock in 3 s fails quietly instead of taking the site down. See [[lock-timeout]].",
 								'**Fix the report:** a `statement_timeout` for the BI role, and point BI at a [[read-replica]].',
 								'**Guard in CI:** a migration linter that flags `ACCESS EXCLUSIVE` DDL on hot tables and requires the lock timeout.'
 							]
@@ -234,7 +234,7 @@ const assessment: Assessment = {
 					prompt: [
 						{
 							type: 'p',
-							text: 'A developer added an index to speed up a new admin page. `payments` has 400 M rows. Card payments started failing at 14:05; browsing the shop was fine the whole time.'
+							text: 'A developer added an [[database-index|index]] to speed up a new admin page. `payments` has 400 M rows. Card payments started failing at 14:05; browsing the shop was fine the whole time.'
 						},
 						{
 							type: 'code',
@@ -340,18 +340,18 @@ const assessment: Assessment = {
 								]
 							}
 						},
-						{ type: 'p', text: 'Settlement runs fee collection (merchant → platform) and fee rebates (platform → merchant) in parallel workers. Why only at month-end, and what is the fix? Someone suggests raising `deadlock_timeout`.' }
+						{ type: 'p', text: '[[settlement]] runs fee collection (merchant → platform) and fee rebates (platform → merchant) in parallel workers. Why only at month-end, and what is the fix? Someone suggests raising `deadlock_timeout`.' }
 					],
 					answer: [
 						{
 							type: 'p',
-							text: '**Inconsistent lock order.** The function locks `from_id` first, then `to_id`. A fee collection (331 → fees) and a rebate (fees → 331) running at the same moment each grab their first row and wait forever for the other\'s. Month-end is the only time both directions run concurrently for the same pairs, and the platform fee account is a single hot row involved in almost every transfer.'
+							text: '**Inconsistent lock order.** The function locks `from_id` first, then `to_id`. A fee collection (331 → fees) and a rebate (fees → 331) running at the same moment each grab their first row and wait forever for the other\'s. Month-end is the only time both directions run concurrently for the same pairs, and the platform fee account is a single [[hot-account|hot row]] involved in almost every transfer.'
 						},
 						{
 							type: 'list',
 							items: [
 								'**Fix:** [[lock-ordering|lock in a global order]]: `for id in sorted([from_id, to_id]): SELECT … FOR UPDATE`. A cycle becomes impossible.',
-								'**Also:** retry the whole transaction on SQLSTATE `40P01` with jittered backoff. Deadlocks are rare after the fix but not impossible elsewhere.',
+								'**Also:** retry the whole transaction on [[serialization-failure|SQLSTATE]] `40P01` with jittered backoff. [[deadlock|Deadlocks]] are rare after the fix but not impossible elsewhere.',
 								"**Hot row:** the fee account is a contention point even without deadlocks. Consider posting fees to per-merchant sub-accounts and sweeping in batches.",
 								'**Red herring:** raising `deadlock_timeout` only makes Postgres wait *longer* before detecting the cycle. It never resolves one.'
 							]
@@ -408,7 +408,7 @@ def place_order(sku: str, qty: int):
 							type: 'list',
 							items: [
 								'Backstop: `CHECK (stock >= 0)`, so a future bug errors instead of overselling.',
-								"Nuance: Repeatable Read in Postgres *would* detect this (the second writer gets a [[serialization-failure]]), but only if you also add a retry loop. Bumping the isolation level alone just turns oversells into 500s.",
+								"Nuance: Repeatable Read in Postgres *would* detect this (the second writer gets a [[serialization-failure]]), but only if you also add a retry loop. Bumping the isolation level alone just turns [[oversell|oversells]] into 500s.",
 								'[[data-remediation|Remediation]]: reconcile orders against physical stock, decide which 37 orders to cancel (usually last-confirmed first), contact those customers, and correct the `stock` value from the warehouse count.'
 							]
 						}
@@ -422,7 +422,7 @@ def place_order(sku: str, qty: int):
 					prompt: [
 						{
 							type: 'p',
-							text: 'A hospital scheduling app must always have at least one doctor on call per shift. Two doctors clicked "go off call" within the same second. Both succeeded. The team insists this can\'t happen: "it\'s in a Repeatable Read transaction."'
+							text: 'A hospital scheduling app must always have at least one doctor on call per shift. Two doctors clicked "go off call" within the same second. Both succeeded. The team insists this can\'t happen: "it\'s in a [[isolation-level|Repeatable Read]] transaction."'
 						},
 						{
 							type: 'code',
@@ -450,7 +450,7 @@ COMMIT;`
 								},
 								{
 									title: 'Run at `SERIALIZABLE` with a retry loop',
-									body: "Postgres's SSI detects the read/write dependency cycle and aborts one with `40001`. It's general, and protects rules you haven't thought of, but every caller needs a retry wrapper. See [[serialization-failure]]."
+									body: "Postgres's [[serializable-snapshot-isolation|SSI]] detects the read/write dependency cycle and aborts one with `40001`. It's general, and protects rules you haven't thought of, but every caller needs a retry wrapper. See [[serialization-failure]]."
 								},
 								{
 									title: 'Materialize the rule',
@@ -462,7 +462,7 @@ COMMIT;`
 							type: 'callout',
 							tone: 'info',
 							title: 'Variant to mention',
-							text: '**Phantoms:** "no two bookings may overlap" can\'t be fixed with `FOR UPDATE`, because the conflicting row doesn\'t exist yet and there\'s nothing to lock. Use an exclusion constraint (`EXCLUDE USING gist (room WITH =, during WITH &&)`) or Serializable.'
+							text: '**Phantoms:** "no two bookings may overlap" can\'t be fixed with `FOR UPDATE`, because the conflicting row doesn\'t exist yet and there\'s nothing to lock. Use an [[exclusion-constraint|exclusion constraint]] (`EXCLUDE USING gist (room WITH =, during WITH &&)`) or Serializable.'
 						}
 					]
 				},
@@ -528,7 +528,7 @@ COMMIT;`
 							type: 'callout',
 							tone: 'warn',
 							title: "Don't",
-							text: "Don't \"buy time\" by restarting the sequence at −2,147,483,648. It works, but every query or report that assumes ids are positive and increasing (`ORDER BY id`, keyset pagination, \"latest event\") silently breaks."
+							text: "Don't \"buy time\" by restarting the sequence at −2,147,483,648. It works, but every query or report that assumes ids are positive and increasing (`ORDER BY id`, [[keyset-pagination|keyset pagination]], \"latest event\") silently breaks."
 						}
 					]
 				},
@@ -631,14 +631,14 @@ That change ships next week, and I'll send a one-page note your auditor can keep
 					answer: [
 						{
 							type: 'p',
-							text: "**Broken [[read-your-writes]].** Normally the replica is 40 ms behind, which is shorter than a page reload. Every hour an ETL job runs one huge `UPDATE`, replay lag jumps to about 6 s, and any user who saves during that window reads their old row back. The tickets line up exactly with the lag spikes."
+							text: "**Broken [[read-your-writes]].** Normally the replica is 40 ms behind, which is shorter than a page reload. Every hour an [[etl]] job runs one huge `UPDATE`, [[replication-lag|replay lag]] jumps to about 6 s, and any user who saves during that window reads their old row back. The tickets line up exactly with the lag spikes."
 						},
 						{
 							type: 'list',
 							items: [
 								'**Red herring:** "it\'s a caching bug". The service has no cache, and caching wouldn\'t follow the ETL schedule.',
 								'**Mitigate:** route reads that follow a write by the same user to the primary for a few seconds (a short-lived cookie or session flag).',
-								'**Fix properly:** after a write, store the primary\'s WAL position (`pg_current_wal_lsn()`) in the session. Read from the replica only if `pg_last_wal_replay_lsn() >= that position`, otherwise use the primary. That\'s exact, not a guess.',
+								'**Fix properly:** after a write, store the primary\'s [[write-ahead-log|WAL]] position (`pg_current_wal_lsn()`) in the session. Read from the replica only if `pg_last_wal_replay_lsn() >= that position`, otherwise use the primary. That\'s exact, not a guess.',
 								'**Fix the cause of the lag:** batch the ETL into small transactions (e.g. 5k rows), or run it against a separate replica.',
 								'Return the updated object in the `PUT` response, so the UI doesn\'t need to read it back at all.'
 							]
@@ -732,12 +732,12 @@ That change ships next week, and I'll send a one-page note your auditor can keep
 									confirm: '`SELECT backend_xmin, xact_start FROM pg_stat_activity WHERE pid = 3310`. Its `backend_xmin` equals the cluster\'s oldest xmin.'
 								},
 								{
-									title: 'An abandoned replication slot',
-									body: 'A slot for a decommissioned replica or CDC connector also holds back the horizon (and WAL). Same symptoms.',
+									title: 'An abandoned [[replication-slot|replication slot]]',
+									body: 'A slot for a decommissioned replica or [[change-data-capture|CDC]] connector also holds back the horizon (and WAL). Same symptoms.',
 									confirm: '`SELECT slot_name, active, xmin, catalog_xmin FROM pg_replication_slots`'
 								},
 								{
-									title: 'An orphaned prepared (two-phase) transaction',
+									title: 'An orphaned [[prepared-transaction|prepared (two-phase) transaction]]',
 									body: 'These survive restarts and are easy to miss.',
 									confirm: '`SELECT * FROM pg_prepared_xacts`'
 								}
@@ -749,7 +749,7 @@ That change ships next week, and I'll send a one-page note your auditor can keep
 						},
 						{
 							type: 'p',
-							text: "**Why the warning matters:** [[xid-wraparound]]. Freezing can't advance past pid 3310's snapshot either. If `age(datfrozenxid)` reaches about 2.1 billion, Postgres stops accepting writes until a manual vacuum completes, and that can take hours on a bloated table."
+							text: "**Why the warning matters:** [[xid-wraparound]]. Freezing can't advance past pid 3310's snapshot either. If `age(datfrozenxid)` reaches about 2.1 billion, Postgres stops accepting writes until a manual vacuum completes, and that can take hours on a [[table-bloat|bloated table]]."
 						},
 						{
 							type: 'list',
@@ -775,7 +775,7 @@ That change ships next week, and I'll send a one-page note your auditor can keep
 						{
 							type: 'list',
 							items: [
-								'The migration ran at 16:00. For the next 6 minutes of the rolling deploy, about half of requests failed with `column "name" does not exist`.',
+								'The migration ran at 16:00. For the next 6 minutes of the [[rolling-update|rolling deploy]], about half of requests failed with `column "name" does not exist`.',
 								'On-call hit "rollback" on the app. The *new* pods were replaced by old ones, and now **100%** of requests failed.'
 							]
 						}
@@ -787,7 +787,7 @@ That change ships next week, and I'll send a one-page note your auditor can keep
 						},
 						{
 							type: 'p',
-							text: 'Mitigate: rename it back (`RENAME COLUMN full_name TO name`). That\'s a fast metadata change, guarded by a [[lock-timeout]]. Then redo the change as an [[expand-contract-migration]]: add `full_name`, dual-write, backfill, switch reads, stop writing `name`, and drop it in a later release.'
+							text: 'Mitigate: rename it back (`RENAME COLUMN full_name TO name`). That\'s a fast metadata change, guarded by a [[lock-timeout]]. Then redo the change as an [[expand-contract-migration]]: add `full_name`, [[dual-write|dual-write]], backfill, switch reads, stop writing `name`, and drop it in a later release.'
 						},
 						{
 							type: 'callout',
@@ -805,7 +805,7 @@ That change ships next week, and I'll send a one-page note your auditor can keep
 					prompt: [
 						{
 							type: 'p',
-							text: 'At 03:18 the managed database cluster failed over during a maintenance window: the reader was promoted to writer, and the old writer came back as a reader. The provider reports failover complete at 03:18:40. The app runs 60 pods, each with a pool of `min 20 / max 40` connections to the cluster endpoint, `maxLifetime = 15 min`.'
+							text: 'At 03:18 the managed database cluster failed over during a maintenance window: the reader was promoted to writer, and the old writer came back as a reader. The provider reports [[failover|failover]] complete at 03:18:40. The app runs 60 pods, each with a pool of `min 20 / max 40` connections to the cluster endpoint, `maxLifetime = 15 min`.'
 						},
 						{
 							type: 'dashboard',
@@ -863,7 +863,7 @@ That change ships next week, and I'll send a one-page note your auditor can keep
 							items: [
 								{
 									title: 'Pooled connections still pointing at the old writer (`25006`, 03:19–03:34)',
-									body: "Connections opened before the failover resolved the cluster DNS name to the old writer's IP. That instance came back as a **reader** and accepted the connections, so pool health checks (`SELECT 1`) passed, while every `INSERT` failed with `cannot execute INSERT in a read-only transaction`. Those connections only went away when `maxLifetime` (15 min) recycled them, which matches the 15-minute error band almost exactly. A JVM or OS DNS cache that ignores the record's TTL makes this worse.",
+									body: "Connections opened before the failover [[dns-caching|resolved the cluster DNS name]] to the old writer's IP. That instance came back as a **reader** and accepted the connections, so [[connection-pool|pool]] health checks (`SELECT 1`) passed, while every `INSERT` failed with `cannot execute INSERT in a read-only transaction`. Those connections only went away when `maxLifetime` (15 min) recycled them, which matches the 15-minute error band almost exactly. A JVM or OS DNS cache that ignores the record's TTL makes this worse.",
 									confirm: '`SELECT inet_server_addr(), pg_is_in_recovery()` from a pod during the window returns the old IP and `true`.'
 								},
 								{
@@ -960,11 +960,11 @@ def run_payouts():
 					answer: [
 						{
 							type: 'p',
-							text: "**[[dst|Daylight saving time]].** On 29 Mar the clocks jump from 02:00 to 03:00, so local 02:30 never exists and the job doesn't run. On 25 Oct 02:00–02:59 happens twice (CEST, then CET), and the scheduler matches 02:30 both times. Not every scheduler behaves like this (classic Vixie cron has special DST handling), which is exactly why you shouldn't depend on it."
+							text: "**[[dst|Daylight saving time]].** On 29 Mar the clocks jump from 02:00 to 03:00, so local 02:30 never exists and the job doesn't run. On 25 Oct 02:00–02:59 happens twice (CEST, then CET), and the [[duplicate-scheduler|scheduler]] matches 02:30 both times. Not every scheduler behaves like this (classic Vixie [[cron|cron]] has special DST handling), which is exactly why you shouldn't depend on it."
 						},
 						{
 							type: 'p',
-							text: "**Why the second run paid again:** probably `available_balance` hadn't been reduced yet. Payouts were \"in flight\" with the provider and are only deducted when the settlement webhook arrives. The job has no notion of \"I already ran for this date\"."
+							text: "**Why the second run paid again:** probably the [[available-balance|available balance]] (`available_balance`) hadn't been reduced yet. Payouts were \"in flight\" with the provider and are only deducted when the settlement [[webhook|webhook]] arrives. The job has no notion of \"I already ran for this date\"."
 						},
 						{
 							type: 'list',
@@ -1047,9 +1047,9 @@ report.fee = (total * 0.029).toFixed(2);`
 							type: 'list',
 							items: [
 								"Parse strings straight to integer cents without going through float: split on `.`, pad to 2 digits, `BigInt` if totals can pass 2^53.",
-								'Sum integers. Compute the fee as `(total_cents × 29 + 500) / 1000` with explicit half-up integer rounding, or use a decimal library.',
+								'Sum integers. Compute the fee as `(total_cents × 29 + 500) / 1000` with explicit [[bankers-rounding|half-up]] integer rounding, or use a decimal library.',
 								'Format only at the edge: `(cents / 100n) + "." + pad(cents % 100n)`.',
-								'Add a reconciliation test: the sum of exported rows equals the sum from the database, to the cent.'
+								'Add a [[reconciliation|reconciliation]] test: the sum of exported rows equals the sum from the database, to the cent.'
 							]
 						}
 					]
@@ -1180,7 +1180,7 @@ tax = sum(round_half_up(unit.price * TAX, 2)
 					answer: [
 						{
 							type: 'p',
-							text: "**Check-then-act race.** Both requests read `refunded = 0`, both pass the check, and both credit $80. Each then writes `refunded = 80`, a [[lost-update]], so the record even *hides* the over-refund. It only happens for wallets because for cards the payment provider enforces \"total refunded ≤ captured\" and rejects the second refund. Wallet credit is internal, so nothing outside the code checks it. See [[auth-and-capture]]."
+							text: "**Check-then-act [[race-condition|race]].** Both requests read `refunded = 0`, both pass the check, and both credit $80. Each then writes `refunded = 80`, a [[lost-update]], so the record even *hides* the over-refund. It only happens for wallets because for cards the payment provider enforces \"total refunded ≤ captured\" and rejects the second refund. Wallet credit is internal, so nothing outside the code checks it. See [[auth-and-capture]]."
 						},
 						{
 							type: 'code',
@@ -1248,7 +1248,7 @@ def withdraw(account_id: int, amount: int):
 								'**Or** wrap the three steps in `with conn.transaction():`. That\'s fine with [[pgbouncer]] in transaction mode, since the transaction stays on one server connection.',
 								'**Backstop:** `CHECK (balance >= 0)`.',
 								'**Better model:** a ledger of entries ([[double-entry-bookkeeping]]) with the balance derived or cached, so every movement is auditable and replayable.',
-								'**The misconception to call out:** "required for pgbouncer". Transaction pooling breaks *session* state (session-level advisory locks, `SET`, prepared statements in older versions), not transactions.'
+								'**The misconception to call out:** "required for pgbouncer". Transaction pooling breaks *session* state (session-level [[advisory-lock|advisory locks]], `SET`, prepared statements in older versions), not transactions.'
 							]
 						}
 					]
@@ -1581,7 +1581,7 @@ export class Ledger {
 							type: 'callout',
 							tone: 'warn',
 							title: 'TS traps',
-							text: 'Returning the stored result object lets a caller mutate it (`res.status = "posted"`) and corrupt the idempotency record. Return a copy or `Object.freeze` it. And `number` is only exact up to 2^53, so for large balances use `bigint`.'
+							text: 'Returning the stored result object lets a caller mutate it (`res.status = "posted"`) and corrupt the idempotency record. Return a copy or `Object.freeze` it. And `number` is a [[floating-point|double]], only exact up to 2^53, so for large balances use `bigint`.'
 						}
 					]
 				},
@@ -1684,7 +1684,7 @@ def test_invariants_hold_after_many_transfers(ledger):
 						},
 						{
 							type: 'p',
-							text: 'The last test is a mini property test: random transfers, then assert the [[ledger-invariant]], cache == entries, and no forbidden negatives. It catches bugs you didn\'t think to write a case for.'
+							text: 'The last test is a mini [[property-based-testing|property test]]: random transfers, then assert the [[ledger-invariant]], cache == entries, and no forbidden negatives. It catches bugs you didn\'t think to write a case for.'
 						}
 					]
 				},
@@ -1799,7 +1799,7 @@ COMMIT;`
 						},
 						{
 							type: 'p',
-							text: "Four entries: each currency balances **on its own** (USD: 0, EUR: 0). You can never add USD to EUR. The FX accounts hold the company's currency position. Store the rate, its source and timestamp on the transfer. Rounding (9000 × 1.1111 = 9999.9 → 10000) is decided once, in one named place, and the 0.1 cent of rounding is the company's FX gain or loss."
+							text: "Four entries: each currency balances **on its own** (USD: 0, EUR: 0). You can never add USD to EUR. The [[foreign-exchange|FX]] accounts hold the company's currency position. Store the rate, its source and timestamp on the transfer. Rounding (9000 × 1.1111 = 9999.9 → 10000) is decided once, in one named place, and the 0.1 cent of rounding is the company's FX gain or loss."
 						}
 					]
 				}
@@ -1845,7 +1845,7 @@ COMMIT;`
 					prompt: [
 						{
 							type: 'p',
-							text: 'Balance is 15. Two sessions at Read Committed run `UPDATE wallets SET balance = balance - 10 WHERE id = 1 AND balance >= 10` at the same instant. Final balance?'
+							text: 'Balance is 15. Two sessions at [[isolation-level|Read Committed]] run `UPDATE wallets SET balance = balance - 10 WHERE id = 1 AND balance >= 10` at the same instant. Final balance?'
 						}
 					],
 					answer: [

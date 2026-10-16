@@ -79,7 +79,7 @@ const a9: Assessment = {
 		{
 			type: 'cards',
 			items: [
-				{ title: 'Threads to watch', items: ['Monday\'s WAF rule → Wednesday', 'Tuesday\'s regex "bot fix" → Wednesday', 'Every day → Friday\'s postmortem'] },
+				{ title: 'Threads to watch', items: ['Monday\'s [[waf|WAF]] rule → Wednesday', 'Tuesday\'s regex "bot fix" → Wednesday', 'Every day → Friday\'s postmortem'] },
 				{ title: 'How answers are graded', items: ['Ranked hypotheses with the check that kills each one', 'Mitigate now vs fix properly, separately', 'Who you tell, when, in what words'] },
 				{ title: 'Labs', items: ['Monday and Wednesday have live consoles', 'The clock starts on your first change', 'Each lab has a tempting move that loses'] }
 			]
@@ -165,13 +165,13 @@ def get_invoice_pdf(user: User, invoice_id: int):
 						},
 						{
 							type: 'p',
-							text: '**Mitigate now (minutes):** add the tenant filter to `get_invoice` (`filter_by(id=…, tenant_id=user.tenant_id).first_or_404()`), and disable the PDF cache or add `user.tenant_id` to its key. Ship both as a hotfix. Return 404, not 403. **Fix properly:** a tenant-scoped repository so `Invoice.query.get` is not reachable from handlers; generated cross-tenant tests for every route with an id; caches keyed by principal by default.'
+							text: '**Mitigate now (minutes):** add the tenant filter to `get_invoice` (`filter_by(id=…, tenant_id=user.tenant_id).first_or_404()`), and disable the PDF cache or add `user.tenant_id` to its key. Ship both as a hotfix. Return 404, not 403. **Fix properly:** a [[tenant-isolation|tenant-scoped]] repository so `Invoice.query.get` is not reachable from handlers; generated cross-tenant tests for every route with an id; caches keyed by principal by default.'
 						},
 						{
 							type: 'callout',
 							tone: 'crit',
 							title: 'Escalation note (send within the hour)',
-							text: '"**SEV1 (security): cross-tenant data exposure.** Any logged-in user could read any invoice by id (`GET /invoices/{id}`), including client names, addresses and bank details. Reported by a customer at 08:12; hotfix deploying at 09:05. Unknown yet: whether it was exploited before today. I\'m pulling cross-tenant access from logs back to the start of retention (est. 2 h). Needs: security lead and DPO now, because if the logs show third-party access this is a notifiable [[personal-data-breach]] with a regulatory clock (72 h under GDPR from awareness). Do **not** reply to the customer with \'caching issue\'."'
+							text: '"**[[severity-triage|SEV1]] (security): cross-tenant data exposure.** Any logged-in user could read any invoice by id (`GET /invoices/{id}`), including client names, addresses and bank details. Reported by a customer at 08:12; hotfix deploying at 09:05. Unknown yet: whether it was exploited before today. I\'m pulling cross-tenant access from logs back to the start of retention (est. 2 h). Needs: security lead and [[data-protection-officer|DPO]] now, because if the logs show third-party access this is a notifiable [[personal-data-breach]] with a regulatory clock (72 h under [[gdpr|GDPR]] from awareness). Do **not** reply to the customer with \'caching issue\'."'
 						},
 						{
 							type: 'p',
@@ -195,14 +195,14 @@ def get_invoice_pdf(user: User, invoice_id: int):
 					answer: [
 						{
 							type: 'p',
-							text: 'This is [[credential-stuffing]]: 412,880 distinct usernames, **1.0 attempts per username**, 41k IPs, top ASN 3%. That fingerprint rules out brute force against a few accounts and rules out a single noisy source.'
+							text: 'This is [[credential-stuffing]]: 412,880 distinct usernames, **1.0 attempts per username**, 41k IPs, top [[asn|ASN]] 3%. That fingerprint rules out brute force against a few accounts and rules out a single noisy source.'
 						},
 						{
 							type: 'ranked',
 							items: [
 								{
 									title: 'Tempting and harmful: scale `login-api`.',
-									body: 'Latency recovers, the dashboard turns green, and account takeovers jump from ~47/min to ~360/min, because the attacker\'s bottleneck was *your* bcrypt capacity. Every extra task is more password guesses checked per second. You lose in about 90 seconds.'
+									body: 'Latency recovers, the dashboard turns green, and account takeovers jump from ~47/min to ~360/min, because the attacker\'s bottleneck was *your* [[bcrypt|bcrypt]] capacity. Every extra task is more password guesses checked per second. You lose in about 90 seconds.'
 								},
 								{
 									title: 'Tempting and useless: account lockout + per-IP rate rule.',
@@ -279,7 +279,7 @@ def get_invoice_pdf(user: User, invoice_id: int):
 						},
 						{
 							type: 'p',
-							text: '**Mitigate now:** a server-side grace window: if the *previous* RT is presented within ~10 s from the same device fingerprint, return the already-issued successor instead of revoking. Long gaps or new devices still revoke. **Fix properly:** client single-flight refresh across tabs (Web Locks or BroadcastChannel leader), then reconsider whether 5-minute access tokens buy anything over 15. Keep the reuse-detection alert, split by gap bucket, so real theft stays visible.'
+							text: '**Mitigate now:** a server-side grace window: if the *previous* RT is presented within ~10 s from the same device fingerprint, return the already-issued successor instead of revoking. Long gaps or new devices still revoke. **Fix properly:** client [[single-flight|single-flight]] refresh across tabs (Web Locks or BroadcastChannel leader), then reconsider whether 5-minute access tokens buy anything over 15. Keep the reuse-detection alert, split by gap bucket, so real theft stays visible.'
 						}
 					]
 				},
@@ -323,13 +323,13 @@ def get_invoice_pdf(user: User, invoice_id: int):
 							items: [
 								'**Inbound webhooks** from the payment provider, the accounting-sync partner and the email provider: a handful of sender IPs, bursty, and hosted on exactly those ASNs. They will get 403s.',
 								'**Customers\' server-to-server API integrations** (ERP syncs) running in AWS/Azure, often behind one NAT IP and well over 300 requests per 5 minutes.',
-								'**Large offices and mobile carriers** behind CGNAT: hundreds of users share one IP ([[rate-limiting-scope]]).',
+								'**Large offices and mobile carriers** behind [[cgnat|CGNAT]]: hundreds of users share one IP ([[rate-limiting-scope]]).',
 								'**Your own** monitoring probes, synthetic checks and internal batch jobs that call the public API.'
 							]
 						},
 						{
 							type: 'p',
-							text: '**Ask for:** scope to `/login`, `/signup`, `/password-reset` only; key by IP *and* username for auth routes; start in **count mode** for 24–48 h and review what it would have blocked; exempt authenticated API keys and signed webhooks (verify the signature, then skip IP rules); alert on 403 rate by path and by known partner. Rule of thumb: an emergency WAF rule gets an owner and an expiry date.'
+							text: '**Ask for:** scope to `/login`, `/signup`, `/password-reset` only; key by IP *and* username for auth routes; start in **count mode** for 24–48 h and review what it would have blocked; exempt authenticated API keys and signed webhooks (verify the signature, then skip IP rules); alert on 403 rate by path and by known partner. Rule of thumb: an emergency [[waf|WAF]] rule gets an owner and an expiry date.'
 						}
 					]
 				}
@@ -374,7 +374,7 @@ def get_invoice_pdf(user: User, invoice_id: int):
 					answer: [
 						{
 							type: 'p',
-							text: '**`:stable` is a [[mutable-image-tag]].** CI moved it to the bad build at 09:02. `rollout undo` restores the previous ReplicaSet spec, which also says `image: registry/billing-api:stable`, so the "old" pods pull the *same new bytes* (`imagePullPolicy: Always`). Deleting pods re-pulls the same tag. The rollback was a no-op dressed as an action.'
+							text: '**`:stable` is a [[mutable-image-tag]].** CI moved it to the bad build at 09:02. `rollout undo` restores the previous [[kubernetes|ReplicaSet]] spec, which also says `image: registry/billing-api:stable`, so the "old" pods pull the *same new bytes* (`imagePullPolicy: Always`). Deleting pods re-pulls the same tag. The [[rollback|rollback]] was a no-op dressed as an action.'
 						},
 						{
 							type: 'p',
@@ -481,7 +481,7 @@ click INV-4475 → GET /api/invoices/1790415528317206500   (404)`
 					answer: [
 						{
 							type: 'p',
-							text: '**[[json-number-precision|JSON number precision]].** The ids exceed 2^53 (9,007,199,254,740,991), so `JSON.parse` in the browser rounds them to the nearest representable double: three different ids collapse into `…206500`. Server, DB and curl are right; mobile and the old client happen to treat ids as strings (or use a big-int-aware parser).'
+							text: '**[[json-number-precision|JSON number precision]].** The new [[snowflake-id|Snowflake-style]] ids exceed 2^53 (9,007,199,254,740,991), so `JSON.parse` in the browser rounds them to the nearest representable double: three different ids collapse into `…206500`. Server, DB and curl are right; mobile and the old client happen to treat ids as strings (or use a big-int-aware parser).'
 						},
 						{
 							type: 'p',
@@ -531,7 +531,7 @@ click INV-4475 → GET /api/invoices/1790415528317206500   (404)`
 					answer: [
 						{
 							type: 'p',
-							text: '**Missing [[stream-backpressure|backpressure]].** `res.write()` returns `false` once the socket buffer is full; the loop ignores it and keeps pulling rows from the DB as fast as the cursor allows. The client (a browser download over a corporate link) reads far slower than Postgres produces, so the whole ~1.5 GB file piles up in response buffers. Each export ramps memory linearly until OOMKilled, three times in the hour.'
+							text: '**Missing [[stream-backpressure|backpressure]].** `res.write()` returns `false` once the socket buffer is full; the loop ignores it and keeps pulling rows from the DB as fast as the cursor allows. The client (a browser download over a corporate link) reads far slower than Postgres produces, so the whole ~1.5 GB file piles up in response buffers. Each export ramps memory linearly until [[oomkilled|OOMKilled]], three times in the hour.'
 						},
 						{
 							type: 'p',
@@ -637,13 +637,13 @@ I assume the payment provider is having an outage? Their status page is green th
 					answer: [
 						{
 							type: 'p',
-							text: '**The provider is fine; we are rejecting its webhooks.** Monday\'s emergency WAF rules shipped as written: the provider sends from three AWS IPs, at bursts above 300 per 5 minutes, so both `global-rate-limit` and `block-hosting-asns` return 403. The provider retried for 72 h and has now given up on 1,912 events (Monday morning\'s), so they will **not** arrive even after we fix the rule.'
+							text: '**The provider is fine; we are rejecting its [[webhook|webhooks]].** Monday\'s emergency WAF rules shipped as written: the provider sends from three AWS IPs, at bursts above 300 per 5 minutes, so both `global-rate-limit` and `block-hosting-asns` return 403. The provider retried for 72 h and has now given up on 1,912 events (Monday morning\'s), so they will **not** arrive even after we fix the rule.'
 						},
 						{
 							type: 'ranked',
 							items: [
 								{ title: 'Unblock: exempt the payment webhook path, with signature verification.', body: 'Scope the auth rate limits back to `/login`-style routes. Exempting by IP is fragile (providers change IPs); signature verification is the real authentication for webhooks.' },
-								{ title: 'Replay what was lost.', body: 'Use the provider\'s events API to list payment events since Monday 09:00 and re-process them through the same idempotent handler (dedupe by event id), or ask them to resend. Do not mark invoices paid by hand from the bank CSV unless reconciliation by event fails.' },
+								{ title: 'Replay what was lost.', body: 'Use the provider\'s events API to list payment events since Monday 09:00 and re-process them through the same [[idempotency|idempotent]] handler (dedupe by event id), or ask them to resend. Do not mark invoices paid by hand from the bank CSV unless [[reconciliation|reconciliation]] by event fails.' },
 								{ title: 'Stop the damage to customers.', body: 'Pause overdue reminders until reconciliation completes; list customers who received a wrong reminder and send an apology.' }
 							]
 						},
@@ -701,7 +701,7 @@ export const isEmail = (s: string) => EMAIL.test(s);`
 					answer: [
 						{
 							type: 'p',
-							text: '**[[redos|ReDoS]], not volume.** Signup traffic is 3/s and flat. Each spike is one core at 100% for 2–4 minutes while the average barely moves, with event-loop lag up to 14.8 s, which freezes *every* route on that pod (all-routes p99 rises in lockstep). `([a-zA-Z0-9]+[._-]?)*` lets the engine split `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa!` in exponentially many ways before failing; one such string per few minutes is enough.'
+							text: '**[[redos|ReDoS]], not volume.** Signup traffic is 3/s and flat. Each spike is one core at 100% for 2–4 minutes while the average barely moves, with [[event-loop|event-loop]] lag up to 14.8 s, which freezes *every* route on that pod (all-routes p99 rises in lockstep). `([a-zA-Z0-9]+[._-]?)*` lets the engine split `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa!` in exponentially many ways before failing; one such string per few minutes is enough.'
 						},
 						{
 							type: 'p',
@@ -739,7 +739,7 @@ profile, prefs = redis.mget(f"profile:{uid}", f"prefs:{uid}")`
 					answer: [
 						{
 							type: 'p',
-							text: 'It stops the error, so it is an acceptable *mitigation*. But understand why it broke: in Redis Cluster a multi-key command must touch one hash slot ([[crossslot]]). Before the rename both keys were `user:{uid}:…` without braces: they also hashed to different slots, so the old code would have failed on the cluster too. Nobody noticed because the cluster move and the rename shipped together.'
+							text: 'It stops the error, so it is an acceptable *mitigation*. But understand why it broke: in [[redis|Redis Cluster]] a multi-key command must touch one hash slot ([[crossslot]]). Before the rename both keys were `user:{uid}:…` without braces: they also hashed to different slots, so the old code would have failed on the cluster too. Nobody noticed because the cluster move and the rename shipped together.'
 						},
 						{
 							type: 'p',
@@ -757,7 +757,7 @@ profile, prefs = redis.mget(f"profile:{uid}", f"prefs:{uid}")`
 					answer: [
 						{
 							type: 'p',
-							text: 'A [[gray-failure]]: shard 0002 is up and passing health checks, but its single engine thread is pinned by `HGETALL session:bulk:*` (9.8 MB replies), so every command to that shard queues. One third of requests hit that shard and wait the full 5 s client timeout; by [[littles-law|Little\'s law]] 600 workers can then serve only ~350 req/s out of 3,000.'
+							text: 'A [[gray-failure]]: [[redis|Redis]] shard 0002 is up and passing health checks, but its single engine thread is pinned by `HGETALL session:bulk:*` (9.8 MB replies), so every command to that shard queues. One third of requests hit that shard and wait the full 5 s client timeout; by [[littles-law|Little\'s law]] 600 workers can then serve only ~350 req/s out of 3,000.'
 						},
 						{
 							type: 'ranked',
@@ -765,7 +765,7 @@ profile, prefs = redis.mget(f"profile:{uid}", f"prefs:{uid}")`
 								{ title: 'Trap: scale the API.', body: 'More workers that each wait 5 s on the same pinned shard. Errors drop to ~45%, latency stays at ~1.8 s, and you add load on the shard.' },
 								{ title: 'Trap: fail over shard 0002.', body: 'For 40 s the shard refuses connections, so clients fail fast and things *look* better. Then the replica is promoted and receives the same `HGETALL` traffic, and you are back where you started.' },
 								{ title: 'Partial: drop the client timeout to 50 ms.', body: 'Converts waits into misses, so availability recovers, but the DB now absorbs 1/3 extra misses (1,150 reads/s vs ~1,000 capacity) and the shard is still pinned. It masks the cause rather than removing it.' },
-								{ title: 'Root cause: the `bulk-session-export` flag went to 100% at T+10.', body: 'It is in the activity log one line before the 503 alarm. Turn it off and the shard recovers in seconds. Keep the low timeout and single-flight as resilience for next time.' }
+								{ title: 'Root cause: the `bulk-session-export` [[feature-flag|flag]] went to 100% at T+10.', body: 'It is in the activity log one line before the 503 alarm. Turn it off and the shard recovers in seconds. Keep the low timeout and single-flight as resilience for next time.' }
 							]
 						},
 						{
@@ -813,7 +813,7 @@ profile, prefs = redis.mget(f"profile:{uid}", f"prefs:{uid}")`
 								},
 								{
 									title: 'Incomplete ranges.',
-									body: 'The list omits IPv6 (including IPv4-mapped IPv6), `0.0.0.0/8`, carrier-grade NAT `100.64.0.0/10`, and other link-local/reserved blocks. A denylist has to be exhaustive to work; an allowlist does not.'
+									body: 'The list omits IPv6 (including IPv4-mapped IPv6), `0.0.0.0/8`, carrier-grade NAT `100.64.0.0/10`, and other link-local/reserved [[cidr|CIDR blocks]]. A denylist has to be exhaustive to work; an allowlist does not.'
 								},
 								{
 									title: 'Flat network.',
@@ -823,7 +823,7 @@ profile, prefs = redis.mget(f"profile:{uid}", f"prefs:{uid}")`
 						},
 						{
 							type: 'p',
-							text: '**Replace the pattern, do not patch the list.** (1) Resolve the host once, validate **every** returned address against an allow/deny set that covers IPv4 and IPv6 reserved ranges, then connect to that pinned address with the original Host/SNI, so no second resolution can swap it. (2) Re-run that validation on each redirect hop, with a hop cap. (3) Send the fetch through an egress proxy on a network with no route to internal ranges, so a validator bug is contained ([[least-privilege]] for the network). (4) Give the worker a minimal role and require IMDSv2. Defense in depth: any one layer failing should not be game over.'
+							text: '**Replace the pattern, do not patch the list.** (1) Resolve the host once, validate **every** returned address against an allow/deny set that covers IPv4 and IPv6 reserved ranges, then connect to that pinned address with the original Host/[[sni|SNI]], so no second resolution can swap it. (2) Re-run that validation on each redirect hop, with a hop cap. (3) Send the fetch through an egress proxy on a network with no route to internal ranges, so a validator bug is contained ([[least-privilege]] for the network). (4) Give the worker a minimal role and require IMDSv2. Defense in depth: any one layer failing should not be game over.'
 						},
 						{
 							type: 'callout',
@@ -860,7 +860,7 @@ profile, prefs = redis.mget(f"profile:{uid}", f"prefs:{uid}")`
 							items: [
 								{ title: 'Confirm the subdomain is the vector.', body: 'Can users put active HTML/JS on docs.ledgerly.app? If yes, that is attacker-controlled same-site content. Check referrer/origin on the malicious POSTs.', confirm: 'Look at Origin headers on recent /settings/invoice-template POSTs; any from docs.ledgerly.app are the exploit.' },
 								{ title: 'Mitigate now.', body: 'Add an anti-CSRF token (or an Origin allowlist of exact origins) to state-changing routes; serve user content from a *separate registrable domain* (ledgerly-usercontent.com), not a subdomain.' },
-								{ title: 'Harden.', body: '`__Host-` cookie prefix, SameSite=Strict for the session where UX allows, and treat every subdomain as a trust boundary.' }
+								{ title: 'Harden.', body: '[[host-cookie-prefix|__Host-]] cookie prefix, SameSite=Strict for the session where UX allows, and treat every subdomain as a trust boundary.' }
 							]
 						},
 						{ type: 'p', text: 'Severity: data-integrity and possible phishing vector (the injected link). Above a cosmetic bug, below the live SSRF. Audit which customers had templates changed and revert them.' }
@@ -896,11 +896,11 @@ profile, prefs = redis.mget(f"profile:{uid}", f"prefs:{uid}")`
 					answer: [
 						{
 							type: 'p',
-							text: '**[[goroutine-leak|Goroutine leak]].** When `deliver` is slow and the 2 s deadline fires, `notify` returns, but the spawned goroutine is still blocked trying to send on the **unbuffered** `resultCh` that no one will ever read again. Goroutine count climbs with every timeout (note it tracks the timeout rate), each one pinning its stack and `msg`, so RSS grows linearly while *heap in-use* and GC stay nearly flat and there is no deploy to blame.'
+							text: '**[[goroutine-leak|Goroutine leak]].** When `deliver` is slow and the 2 s deadline fires, `notify` returns, but the spawned goroutine is still blocked trying to send on the **unbuffered** `resultCh` that no one will ever read again. Goroutine count climbs with every timeout (note it tracks the timeout rate), each one pinning its stack and `msg`, so [[rss-memory|RSS]] grows linearly while *heap in-use* and [[gc-pause|GC]] stay nearly flat and there is no deploy to blame.'
 						},
 						{
 							type: 'p',
-							text: '**Fix:** make the channel buffered (`make(chan error, 1)`) so the sender never blocks, or pass the context into `deliver` so it actually cancels the work. Confirm with `pprof` goroutine profile: thousands parked on `chan send` at this line. General rule: every goroutine needs a guaranteed exit, and a `select` with `ctx.Done()` must not orphan the other branch.'
+							text: '**Fix:** make the channel buffered (`make(chan error, 1)`) so the sender never blocks, or pass the context into `deliver` so it actually cancels the work. Confirm with `pprof` goroutine [[profiling|profile]]: thousands parked on `chan send` at this line. General rule: every goroutine needs a guaranteed exit, and a `select` with `ctx.Done()` must not orphan the other branch.'
 						}
 					]
 				},
@@ -924,7 +924,7 @@ profile, prefs = redis.mget(f"profile:{uid}", f"prefs:{uid}")`
 								]
 							}
 						},
-						{ type: 'p', text: 'The API (restarted nightly) is fine. Only `reporting-worker` fails, and only from ~08:00, seven hours after the rotation. Why the delay, and why only that service?' }
+						{ type: 'p', text: 'The API (restarted nightly) is fine. Only `reporting-worker` fails, and only from ~08:00, seven hours after the [[secret-rotation|rotation]]. Why the delay, and why only that service?' }
 					],
 					answer: [
 						{
@@ -957,7 +957,7 @@ profile, prefs = redis.mget(f"profile:{uid}", f"prefs:{uid}")`
 					prompt: [
 						{
 							type: 'p',
-							text: 'Ledgerly ships an LLM "support copilot" that reads the current ticket and can call tools: `lookup_customer`, `issue_refund(invoice_id, amount)`, `send_email(to, body)`. Overnight it issued a refund on an invoice belonging to a *different* customer and emailed an account summary to an outside address. Token spend also spiked.'
+							text: 'Ledgerly ships an [[llm|LLM]] "support copilot" that reads the current ticket and can call tools: `lookup_customer`, `issue_refund(invoice_id, amount)`, `send_email(to, body)`. Overnight it issued a refund on an invoice belonging to a *different* customer and emailed an account summary to an outside address. [[llm-token|Token spend]] also spiked.'
 						},
 						{
 							type: 'dashboard',
@@ -1069,7 +1069,7 @@ profile, prefs = redis.mget(f"profile:{uid}", f"prefs:{uid}")`
 							items: [
 								'**Every emergency change carries three fields:** scope (which paths/services), owner, and an expiry timestamp. No expiry → it reverts automatically in 24–48h.',
 								'**Count/dry-run mode first** for anything that blocks or drops traffic (WAF rules, rate limits), with a one-click promote once you’ve seen what it *would* have hit.',
-								'**A blast-radius checklist the tool shows inline:** does this touch webhooks? partner IPs? authenticated API traffic? internal probes? — answerable in 20 seconds.',
+								'**A [[blast-radius|blast-radius]] checklist the tool shows inline:** does this touch webhooks? partner IPs? authenticated API traffic? internal probes? — answerable in 20 seconds.',
 								'**Protected lanes:** signed webhooks and authenticated machine clients are exempt from IP/rate heuristics by default; you opt them *in* to blocking, never by accident.',
 								'**Auto-revert + review:** emergency changes open a tracking issue on creation and ping the owner at expiry: keep, extend, or let it lapse.',
 								'**Guardrail, not gate:** on-call can still ship in one command during a SEV1; the system records scope/owner/expiry and watches for collateral (e.g. a jump in non-2xx to known partners) and alerts, rather than requiring sign-off up front.'
@@ -1100,7 +1100,7 @@ profile, prefs = redis.mget(f"profile:{uid}", f"prefs:{uid}")`
 						{
 							type: 'list',
 							items: [
-								'**A:** "p95 checkout latency 220ms → 340ms" (SLO is 500ms).',
+								'**A:** "p95 checkout latency 220ms → 340ms" ([[slo|SLO]] is 500ms).',
 								'**B:** a customer email, forwarded by support: "I can see another company’s name in my user dropdown."',
 								'**C:** "disk 78% on log-archive volume."'
 							]
@@ -1112,7 +1112,7 @@ profile, prefs = redis.mget(f"profile:{uid}", f"prefs:{uid}")`
 							type: 'list',
 							ordered: true,
 							items: [
-								'**B first — possible cross-tenant exposure.** Security outranks everything; it may be another IDOR/cache-key leak, and the clock on a [[personal-data-breach]] starts at awareness. Confirm scope immediately even half-asleep.',
+								'**B first — possible cross-tenant exposure.** Security outranks everything; it may be another [[idor|IDOR]]/cache-key leak, and the clock on a [[personal-data-breach]] starts at awareness. Confirm scope immediately even half-asleep.',
 								'**C second — it has a deadline.** 78% isn’t urgent now, but a full log volume can wedge services later; glance at the fill rate, extend or rotate, move on. Cheap insurance.',
 								'**A last — within SLO.** 340ms < 500ms is a watch, not a page. Note it; don’t act at 03:40.'
 							]

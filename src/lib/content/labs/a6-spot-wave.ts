@@ -119,7 +119,7 @@ const lab: Lab = {
 		{ id: 'spot', label: 'Spot share', unit: '%', get: (s) => (capacity(s) ? (n(s, '_spot') / capacity(s)) * 100 : 0), max: 100 }
 	],
 	win: {
-		text: 'At least 40 healthy instances, 5xx under 1%, spend under $5/h, held for 60 s.',
+		text: 'At least 40 healthy instances, [[http-status-codes|5xx]] under 1%, spend under $5/h, held for 60 s.',
 		check: (_s, m, t) => t > 60 && m.cap >= NEED && m.err < 1 && m.cost <= BUDGET,
 		hold: 60
 	},

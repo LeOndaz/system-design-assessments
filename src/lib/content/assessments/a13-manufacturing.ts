@@ -162,11 +162,11 @@ const a13: Assessment = {
 						},
 						{
 							type: 'p',
-							text: 'The vase wall is a smooth spline exported as 0.2 mm segments, printed at 80 mm/s. Average G-code line length is 32 bytes. Where do the blobs come from, and what would you change?'
+							text: 'The vase wall is a smooth spline exported as 0.2 mm segments, printed at 80 mm/s. Average [[g-code]] line length is 32 bytes. Where do the blobs come from, and what would you change?'
 						}
 					],
 					hints: [
-						'How many bytes per second does 115200 baud carry (8N1 means 10 bits per byte)?',
+						'How many bytes per second does 115200 baud carry ([[serial-8n1|8N1]] means 10 bits per byte)?',
 						'How many segments per second does 80 mm/s over 0.2 mm segments ask for?'
 					],
 					answer: [
@@ -262,7 +262,7 @@ def pump(self):
 							items: [
 								'**Fix the protocol:** on `Resend: n`, discard everything in flight, reset `inflight`, and resend from *n* in order. Never send a line number the firmware has already acknowledged.',
 								'**Checksums:** [[serial-line-checksum|XOR of every byte before `*`]]. `N123 G1 X10.5 E0.42` → `*55`. The checksum caught the corruption; the host\'s retry logic created the damage.',
-								'**Design lesson:** absolute coordinates make duplicates [[idempotency|idempotent]]; relative ones don\'t. If your transport is [[at-least-once]], prefer absolute positioning, or make the transport exactly-once per line number (which is what N-lines are for).'
+								'**Design lesson:** absolute coordinates make duplicates [[idempotency|idempotent]]; relative ones don\'t. If your transport is [[at-least-once]], prefer absolute positioning, or make the transport [[exactly-once|exactly-once]] per line number (which is what N-lines are for).'
 							]
 						}
 					]
@@ -300,7 +300,7 @@ def dispatch(job, printer):
 								'**[[idempotency-key|Idempotency key]] on the agent:** send `job_id` and have the agent store accepted ids durably; a repeat POST returns the existing job\'s status instead of queuing a copy.',
 								'**Reply before slow work:** the agent should persist the job and return `202 Accepted` immediately, then heat the bed. Long synchronous handlers create timeouts.',
 								'**Reconcile instead of blind retry:** after a timeout, `GET /jobs/{job_id}` on the agent before deciding to re-send.',
-								'**Physical side effects are at-most-once by design:** a duplicate costs material and hours and can\'t be refunded. Make the expensive step (the physical start) the deduplicated one, and keep retries for the cheap messages around it.'
+								'**Physical side effects are [[at-least-once|at-most-once]] by design:** a duplicate costs material and hours and can\'t be refunded. Make the expensive step (the physical start) the deduplicated one, and keep retries for the cheap messages around it.'
 							]
 						}
 					]
@@ -337,7 +337,7 @@ def dispatch(job, printer):
 								},
 								{
 									title: 'The "remaining" number was never true to the gram.',
-									body: 'Remaining weight is an estimate: the spool\'s starting weight ± ~15 g, minus slicer estimates that ignore purge lines, failed first layers and retraction losses. Even serialised, reserving 200 g out of an *estimated* 300 g left a margin of 100 g on a number with tens of grams of error.'
+									body: 'Remaining weight is an estimate: the spool\'s starting weight ± ~15 g, minus slicer estimates that ignore [[purge-line|purge line]]s, failed first layers and [[retraction|retraction]] losses. Even serialised, reserving 200 g out of an *estimated* 300 g left a margin of 100 g on a number with tens of grams of error.'
 								}
 							]
 						},
@@ -400,7 +400,7 @@ RETURNING reserved_g;                              -- 0 rows → not enough mate
 						{
 							type: 'code',
 							lang: 'python',
-							caption: 'How the canary set was chosen.',
+							caption: 'How the [[canary-analysis|canary]] set was chosen.',
 							code: `canary = (Printer.query
           .order_by(Printer.registered_at.desc())   # newest first: "they get support fastest"
           .limit(int(fleet_size * 0.05)))`
@@ -410,7 +410,7 @@ RETURNING reserved_g;                              -- 0 rows → not enough mate
 					answer: [
 						{
 							type: 'p',
-							text: '**The canary was not representative.** "Newest 5%" selected only rev C boards (registered recently), so the 0% failure rate in the canary said nothing about rev B. The 251 KB image does not fit rev B\'s 256 KB flash once the bootloader (~8 KB) is counted, so every rev B in stage 2 bricked itself. The canary didn\'t fail; it measured a different population.'
+							text: '**The canary was not representative.** "Newest 5%" selected only rev C boards (registered recently), so the 0% failure rate in the canary said nothing about rev B. The 251 KB image does not fit rev B\'s 256 KB flash once the [[bootloader|bootloader]] (~8 KB) is counted, so every rev B in stage 2 bricked itself. The canary didn\'t fail; it measured a different population.'
 						},
 						{
 							type: 'list',
@@ -432,7 +432,7 @@ RETURNING reserved_g;                              -- 0 rows → not enough mate
 					prompt: [
 						{
 							type: 'p',
-							text: 'A new scheduler packs up to 9 brackets per build plate using [[bin-packing|first-fit-decreasing]] on plate area; it used to print 3 per plate. Facts: each plate costs 20 min of setup (clear, level, heat), each bracket adds 50 min, each bracket independently fails 4% of the time (spaghetti), and an operator aborts the whole plate on any failure because spaghetti wrecks the others.'
+							text: 'A new scheduler packs up to 9 brackets per build plate using [[bin-packing|first-fit-decreasing]] on plate area; it used to print 3 per plate. Facts: each plate costs 20 min of setup (clear, level, heat), each bracket adds 50 min, each bracket independently fails 4% of the time ([[spaghetti-failure|spaghetti]]), and an operator aborts the whole plate on any failure because spaghetti wrecks the others.'
 						},
 						{ type: 'p', text: 'Compute good parts per hour for 1, 3, 5 and 9 per plate. What objective should the packer optimise?' }
 					],
@@ -527,7 +527,7 @@ F in G-code                      mm/min (or in/min after G20)`
 					prompt: [
 						{
 							type: 'p',
-							text: 'Someone shipped a "draft fast" profile: 0.6 mm nozzle, 0.30 mm layers, 0.65 mm line width, 150 mm/s. Parts snap along layer lines. The hotend is rated for 15 mm³/s. A teammate blames humid filament.'
+							text: 'Someone shipped a "draft fast" profile: 0.6 mm nozzle, 0.30 mm layers, 0.65 mm line width, 150 mm/s. Parts snap along layer lines. The [[hotend|hotend]] is rated for 15 mm³/s. A teammate blames humid filament.'
 						},
 						{
 							type: 'dashboard',
@@ -603,7 +603,7 @@ F in G-code                      mm/min (or in/min after G20)`
 							items: [
 								'**Good estimator:** simulate the firmware\'s planner (acceleration, junction deviation, buffer size), not geometry alone. That is how slicers get within a few percent.',
 								'**Calibrate with actuals:** record estimated vs actual per printer model and part class; fit a correction; alert when error drifts (a firmware update changing acceleration shows up here first).',
-								'**Customer promise dates** should use a percentile of actual/estimate ratios, not the raw estimate.'
+								'**Customer promise dates** should use a [[percentiles|percentile]] of actual/estimate ratios, not the raw estimate.'
 							]
 						}
 					]
@@ -726,7 +726,7 @@ on another machine that runs 0.1 mm small → 50.50 slot vs 50.49 stack: jams`
 					prompt: [
 						{
 							type: 'p',
-							text: 'Two incidents in one week. (a) A customer\'s phone stand arrives the size of a postage stamp. (b) On the CNC side, a router crashed into its fixture: the program before it ended with `G20`, and the crashing program has no units line in its header.'
+							text: 'Two incidents in one week. (a) A customer\'s phone stand arrives the size of a postage stamp. (b) On the [[cnc]] side, a router crashed into its fixture: the program before it ended with `G20`, and the crashing program has no units line in its header.'
 						}
 					],
 					answer: [
@@ -811,7 +811,7 @@ on another machine that runs 0.1 mm small → 50.50 slot vs 50.49 stack: jams`
 					answer: [
 						{
 							type: 'p',
-							text: '**A [[retained-message|retained]] "RUNNING" with no [[last-will-message|last will]].** At 09:14 the press published its state with `r1` (retained). At 09:15 the broker noticed the press had vanished (keep-alive timeout) but had nothing to publish on its behalf: `will: none`. Every dashboard that connects later is handed the last retained value. The dashboard shows the last thing the machine said, with no staleness.'
+							text: '**A [[retained-message|retained]] "RUNNING" with no [[last-will-message|last will]].** At 09:14 the press published its state to the [[mqtt|MQTT]] broker with `r1` (retained). At 09:15 the broker noticed the press had vanished (keep-alive timeout) but had nothing to publish on its behalf: `will: none`. Every dashboard that connects later is handed the last retained value. The dashboard shows the last thing the machine said, with no staleness.'
 						},
 						{
 							type: 'list',
@@ -819,7 +819,7 @@ on another machine that runs 0.1 mm small → 50.50 slot vs 50.49 stack: jams`
 								'**Register a retained last will** at connect: `will topic = plant/press-07/state, payload = OFFLINE, retain = true`. The broker publishes it on timeout.',
 								'**Publish the timestamp with the state** and have dashboards grey out anything older than 2× the expected interval. Staleness should be visible, not inferred.',
 								'**Separate "connected" from "running":** a heartbeat topic per machine plus the PLC\'s own run signal. A dark cabinet can\'t say anything, so absence of heartbeat must render as UNKNOWN, never as the last good state.',
-								'**Reply to the plant manager:** what happened, which screens could have shown the same (every retained-state tile), and when the fix lands. Trust in the andon is a safety and productivity issue, not cosmetic.'
+								'**Reply to the plant manager:** what happened, which screens could have shown the same (every retained-state tile), and when the fix lands. Trust in the [[andon|andon]] is a safety and productivity issue, not cosmetic.'
 							]
 						}
 					]
@@ -872,7 +872,7 @@ on another machine that runs 0.1 mm small → 50.50 slot vs 50.49 stack: jams`
 								]
 							}
 						},
-						{ type: 'p', text: 'The OPC UA subscription samples pressure every 500 ms. The valve that causes the spike closes in about 40 ms. What can and can\'t you conclude, and what would you change?' }
+						{ type: 'p', text: 'The [[opc-ua]] subscription samples pressure every 500 ms. The valve that causes the spike closes in about 40 ms. What can and can\'t you conclude, and what would you change?' }
 					],
 					answer: [
 						{
@@ -937,7 +937,7 @@ on another machine that runs 0.1 mm small → 50.50 slot vs 50.49 stack: jams`
 							items: [
 								'Shift report (night, 22:00–06:00): Availability **99.1%**, Performance 81%, Quality 97%.',
 								'Availability = 1 − (sum of downtime events in the shift ÷ planned time). Part counts come from the PLC\'s cumulative counter, read once at shift end.',
-								'The edge gateway buffered during the WAN outage (02:00–05:00) and stamps events with its own clock, which an NTP check later showed was **7 minutes fast**.'
+								'The edge gateway buffered during the [[wan]] outage (02:00–05:00) and stamps events with its own clock, which an [[ntp|NTP]] check later showed was **7 minutes fast**.'
 							]
 						}
 					],
@@ -946,7 +946,7 @@ on another machine that runs 0.1 mm small → 50.50 slot vs 50.49 stack: jams`
 							type: 'ranked',
 							items: [
 								{
-									title: 'The OEE job ran before the backfill finished.',
+									title: 'The [[oee|OEE]] job ran before the backfill finished.',
 									body: 'The gateway [[edge-gateway|stored and forwarded]] three hours of events; they were still arriving between 05:10 and 05:40 (the ingest burst and the ~3-hour lag). The job at 05:20 saw almost no downtime events for 02:00–05:00, so availability looked perfect. The part count comes from a counter read, which *was* complete, so performance absorbed the loss and fell to 81%. A shift report computed before its data closed is a [[late-arriving-data]] bug.',
 									confirm: 'Re-run the job now: availability drops sharply, performance rises, OEE barely moves, exactly the signature of downtime misattributed.'
 								},
@@ -1038,7 +1038,7 @@ Audit: 361 × 1.0 / 480           = 0.752 ✓`
 						},
 						{
 							type: 'p',
-							text: 'Report the audit identity next to every OEE tile; if the three factors don\'t multiply to good × ideal ÷ planned, a definition is wrong. And show micro-stops explicitly: 45 minutes a shift is the biggest single improvement target on this line.'
+							text: 'Report the audit identity next to every OEE tile; if the three factors don\'t multiply to good × ideal ÷ planned, a definition is wrong. And show micro-stops explicitly (the [[mes|MES]] downtime log only records stops ≥ 5 min): 45 minutes a shift is the biggest single improvement target on this line.'
 						}
 					]
 				},
@@ -1105,7 +1105,7 @@ Cpk 1.05 → ~0.08% of parts beyond the upper limit. At this drift rate (~0.003 
 						},
 						{
 							type: 'p',
-							text: '**Action:** don\'t stop blindly; find the assignable cause now (compensate the tool offset, check coolant temperature), because a cheap correction today prevents scrap tomorrow. [[process-capability|Cpk]] tells you how much room you have; the control chart tells you you\'re using it up.'
+							text: '**Action:** don\'t stop blindly; find the assignable cause now (compensate the tool offset, check coolant temperature), because a cheap correction today prevents scrap tomorrow. [[process-capability|Cpk]] tells you how much room you have; the [[control-chart|control chart]] tells you you\'re using it up.'
 						}
 					]
 				},
@@ -1141,7 +1141,7 @@ Cpk 1.05 → ~0.08% of parts beyond the upper limit. At this drift rate (~0.003 
 							type: 'list',
 							items: [
 								'**Confirm:** change the sample rate (e.g. 90 Hz). An alias moves (to |120 − 90| = 30 Hz); a real 20 Hz source stays put. Or run the spindle at 6,000 rpm and watch the "20 Hz" peak move to 0 Hz.',
-								'**Fix:** sample at ≥ 2.5× the highest frequency of interest (here ≥ 300 Hz, typically 1–5 kHz for bearings) with an analogue anti-aliasing filter before the ADC; compute the spectrum at the edge and ship features (peak frequencies, RMS), not raw samples.',
+								'**Fix:** sample at ≥ 2.5× the highest frequency of interest (here ≥ 300 Hz, typically 1–5 kHz for bearings) with an analogue anti-aliasing filter before the [[adc|ADC]]; compute the spectrum at the edge and ship features (peak frequencies, [[rms|RMS]]), not raw samples.',
 								'**The roller is the red herring:** its 19.5 Hz is a coincidence that makes the wrong diagnosis feel confirmed. Replacing it would "fix" nothing and teach the team that the model works.'
 							]
 						}
@@ -1176,7 +1176,7 @@ inspection load = 59 alarms × 2 h            = 118 h/month for ~9.5 real faults
 							items: [
 								'**Set the threshold by cost, not accuracy:** a missed bearing costs maybe 30 h of downtime, an inspection 2 h. Pick the operating point that minimises total cost; that may mean fewer, higher-confidence alarms.',
 								'**Two-stage triage:** an alarm first triggers a cheap check (a 5-minute handheld vibration reading or an automatic high-rate capture), and only confirmed cases get the 2-hour inspection.',
-								'**Report precision to technicians** and feed their findings back as labels. Alarm fatigue is a trust problem, and trust is rebuilt with numbers they can see.'
+								'**Report [[recall-precision|precision]] to technicians** and feed their findings back as labels. [[alarm-fatigue]] is a trust problem, and trust is rebuilt with numbers they can see.'
 							]
 						}
 					]
@@ -1247,7 +1247,7 @@ FROM serials s JOIN downstream d ON s.batch_lot = d.child_lot;`
 					prompt: [
 						{
 							type: 'p',
-							text: 'Request: "Supervisors should be able to stop any machine from the browser, and restart it once the issue is fixed." The dashboard talks to machines via the cloud → MQTT → edge gateway → PLC. Design what you would build, and what you would refuse to build.'
+							text: 'Request: "Supervisors should be able to stop any machine from the browser, and restart it once the issue is fixed." The dashboard talks to machines via the cloud → MQTT → [[edge-gateway|edge gateway]] → PLC. Design what you would build, and what you would refuse to build.'
 						}
 					],
 					answer: [
@@ -1257,7 +1257,7 @@ FROM serials s JOIN downstream d ON s.batch_lot = d.child_lot;`
 								'**Refuse: the web button as a safety function.** An emergency stop is a [[safety-interlock]]: hard-wired, local, certified, with a guaranteed response time. A path through a browser, the internet, a broker and a gateway has none of those properties. Write that down so it doesn\'t come back as "just for emergencies".',
 								'**Build: a "request controlled stop".** The PLC exposes a command the logic is designed to accept (finish the cycle, park the axes, then stop). The cloud only sends a request; the PLC decides. Requests carry an id, an expiry (a stop that arrives 10 minutes late must be discarded) and are acknowledged with the resulting machine state.',
 								'**Restart is the dangerous one.** A remote start can move a machine while someone is inside it. Require local confirmation at the machine (a physical reset button), never remote-only.',
-								'**Security:** strong auth and authorisation per machine, audit log of every command, network segmentation (IEC 62443 zones), and the gateway only accepts commands from an allow-listed service, never directly from browsers.',
+								'**Security:** strong auth and authorisation per machine, audit log of every command, network segmentation ([[iec-62443]] zones), and the gateway only accepts commands from an allow-listed service, never directly from browsers.',
 								'**Failure modes:** if the network is down, the button must show "unavailable", not silently queue. And a supervisor seeing "STOP sent" must be able to tell it from "machine stopped".'
 							]
 						}
@@ -1292,11 +1292,11 @@ FROM serials s JOIN downstream d ON s.batch_lot = d.child_lot;`
 								},
 								{
 									title: 'Trap 1: turn on hall B (80 printers).',
-									body: 'Doubles printer cost, changes nothing: throughput is still capped by the slicer at 0.5 jobs/min, so the projected finish stays ~660 min. Utilisation halves.'
+									body: 'Doubles printer cost, changes nothing: [[throughput|throughput]] is still capped by the slicer at 0.5 jobs/min, so the projected finish stays ~660 min. Utilisation halves.'
 								},
 								{
 									title: 'Trap 2: scale the slicer to 6 workers.',
-									body: '6 × 2.5 GB = 15 GB on an 8 GB node: OOMKilled, crash loop, slicer output drops to **zero**. The details pane says so ("worker exceeded node memory").'
+									body: '6 × 2.5 GB = 15 GB on an 8 GB node: [[oomkilled]], crash loop, slicer output drops to **zero**. The details pane says so ("worker exceeded node memory").'
 								},
 								{
 									title: 'Fix: content-addressed slice cache, then add printers.',
@@ -1307,7 +1307,7 @@ FROM serials s JOIN downstream d ON s.batch_lot = d.child_lot;`
 						{
 							type: 'callout',
 							tone: 'info',
-							text: 'This is the theory of constraints in one screen: improve the bottleneck, then **look again**, because the bottleneck moves. Adding capacity anywhere else only adds cost.'
+							text: 'This is the [[theory-of-constraints|theory of constraints]] in one screen: improve the bottleneck, then **look again**, because the bottleneck moves. Adding capacity anywhere else only adds cost.'
 						}
 					]
 				},
@@ -1332,7 +1332,7 @@ FROM serials s JOIN downstream d ON s.batch_lot = d.child_lot;`
 								},
 								{
 									title: 'Trap: resize the broker.',
-									body: 'The broker is a single instance with non-replicated sessions: resizing reboots it for ~90 s, during which every gateway buffers with nowhere to send, and then 40 gateways reconnect at once (a reconnect storm at 3× load). The buffers overflow during the window.'
+									body: 'The broker is a single instance with non-replicated sessions: resizing reboots it for ~90 s, during which every gateway buffers with nowhere to send, and then 40 gateways reconnect at once (a [[connection-storm|reconnect storm]] at 3× load). The buffers overflow during the window.'
 								},
 								{
 									title: 'Trap: QoS 0.',
@@ -1805,7 +1805,7 @@ def test_lowercase_and_extra_spaces():
 					answer: [
 						{
 							type: 'p',
-							text: 'Lead time = WIP ÷ throughput = 120 ÷ 20 = **6 hours** ([[littles-law]]). Want 2-hour lead times at the same throughput? Cut WIP to 40. Adding machines doesn\'t shorten lead time if WIP grows to fill them.'
+							text: 'Lead time = [[wip|WIP]] ÷ throughput = 120 ÷ 20 = **6 hours** ([[littles-law]]). Want 2-hour lead times at the same throughput? Cut WIP to 40. Adding machines doesn\'t shorten lead time if WIP grows to fill them.'
 						}
 					]
 				},
@@ -1813,7 +1813,7 @@ def test_lowercase_and_extra_spaces():
 					id: 't8',
 					title: 'The checksum',
 					tag: 'teaser',
-					prompt: [{ type: 'p', text: 'What is the checksum for the line `N1 G28`, and why is XOR a weak choice?' }],
+					prompt: [{ type: 'p', text: 'What is the [[serial-line-checksum|checksum]] for the line `N1 G28`, and why is XOR a weak choice?' }],
 					answer: [
 						{
 							type: 'p',

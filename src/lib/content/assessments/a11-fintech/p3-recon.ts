@@ -37,10 +37,10 @@ export const recon: Part = {
 			tag: 'core',
 			minutes: 7,
 			prompt: [
-				{ type: 'p', text: 'Business day **Wed Oct 14** (Europe/Berlin, UTC+2). Explain every difference with a number and a category.' },
+				{ type: 'p', text: 'Business day **Wed Oct 14** (Europe/Berlin, [[utc|UTC]]+2). Explain every difference with a number and a category.' },
 				{
 					type: 'table',
-					head: ['Line', 'Ledger (Berlin day)', 'PSP settlement report (UTC day)', 'Bank statement'],
+					head: ['Line', 'Ledger (Berlin day)', 'PSP [[settlement|settlement report]] (UTC day)', 'Bank statement'],
 					numeric: [1, 2, 3],
 					rows: [
 						['Gross sales', '48,210.00', '47,930.00', ''],

@@ -118,7 +118,7 @@ const a0: Assessment = {
 							numeric: [1, 2],
 							rows: [
 								['[[dns|DNS]] lookup (resolver cache miss)', '~40 ms', '0 (cached)'],
-								['[[tcp-handshake|TCP handshake]]', '40 ms (1 RTT)', '0 (connection kept open)'],
+								['[[tcp-handshake|TCP handshake]]', '40 ms (1 [[rtt|RTT]])', '0 (connection kept open)'],
 								['[[tls-handshake|TLS 1.3 handshake]]', '40 ms (1 RTT)', '0 (reused)'],
 								['Request → first byte', '40 ms', '40 ms'],
 								['Server work', '50 ms', '50 ms'],
@@ -137,7 +137,7 @@ const a0: Assessment = {
 					tag: 'core',
 					minutes: 4,
 					prompt: [
-						{ type: 'p', text: '`GET /dashboard` takes 640 ms at the server. Here is one typical trace.' },
+						{ type: 'p', text: '`GET /dashboard` takes 640 ms at the server. Here is one typical [[trace-span|trace]].' },
 						{
 							type: 'trace',
 							trace: {
@@ -164,7 +164,7 @@ const a0: Assessment = {
 							type: 'list',
 							items: [
 								'**Fix:** one query for all tasks: `SELECT * FROM tasks WHERE project_id = ANY($1)`, then group in code. 560 ms → ~20 ms.',
-								'**Don\'t start with:** Redis (1 ms) or auth (12 ms). Optimising a span that is 2% of the time can save at most 2%.',
+								'**Don\'t start with:** [[redis|Redis]] (1 ms) or auth (12 ms). Optimising a span that is 2% of the time can save at most 2%.',
 								'**Rule of thumb:** in a trace, fix the widest bar first, and look for many identical small bars in a row; that is almost always a loop doing I/O.'
 							]
 						}
@@ -263,7 +263,7 @@ const a0: Assessment = {
 							head: ['Step', 'Arithmetic', 'Result'],
 							rows: [
 								['Requests per day', '50M × 30', '1.5 billion'],
-								['Average QPS', '1.5B ÷ 86,400', '≈ 17,400 req/s'],
+								['Average [[throughput|QPS]]', '1.5B ÷ 86,400', '≈ 17,400 req/s'],
 								['Peak QPS', '17,400 × 3', '≈ 52,000 req/s'],
 								['Usable capacity per server', '1,000 × 70%', '700 req/s'],
 								['Servers at peak', '52,000 ÷ 700', '≈ 75']
@@ -347,7 +347,7 @@ const a0: Assessment = {
 						},
 						{
 							type: 'p',
-							text: 'Real access patterns are skewed, so a small cache usually gets most of the benefit. Size the cache for the hot set, use a [[ttl]] and an eviction policy ([[lru]]), and let the long tail go to the database.'
+							text: 'Real access patterns are skewed, so a small cache usually gets most of the benefit. Size the cache for the hot set, use a [[ttl]] and an [[eviction|eviction]] policy ([[lru]]), and let the long tail go to the database.'
 						}
 					]
 				},
@@ -393,7 +393,7 @@ const a0: Assessment = {
 					prompt: [
 						{
 							type: 'p',
-							text: 'A young product has one app server (4 vCPU, 80% CPU at peak) and one Postgres server (4 vCPU, 85% CPU at peak). Traffic will double in three months. What do you do for each, and why might the answers differ?'
+							text: 'A young product has one app server (4 [[vcpu|vCPU]], 80% CPU at peak) and one Postgres server (4 vCPU, 85% CPU at peak). Traffic will double in three months. What do you do for each, and why might the answers differ?'
 						}
 					],
 					answer: [
@@ -479,7 +479,7 @@ const a0: Assessment = {
 						{
 							type: 'list',
 							items: [
-								'The load balancer\'s check should ask "**can this process serve requests?**" (it is running and not deadlocked), not "is everything I depend on healthy?".',
+								'The load balancer\'s check should ask "**can this process serve requests?**" (it is running and not [[deadlock|deadlocked]]), not "is everything I depend on healthy?".',
 								'Handle a failing dependency **inside** the request: [[timeout]], [[circuit-breaker]], [[graceful-degradation|degrade]] the features that need it.',
 								'Report dependency health on a separate endpoint for dashboards and alerts. See [[deep-health-check]] and [[readiness-probe]].'
 							]
@@ -488,7 +488,7 @@ const a0: Assessment = {
 				},
 				{
 					id: 'f-p3q5',
-					title: 'Autoscaling on CPU didn\'t scale',
+					title: '[[autoscaling|Autoscaling]] on CPU didn\'t scale',
 					tag: 'tricky',
 					minutes: 3,
 					prompt: [
@@ -544,8 +544,8 @@ const a0: Assessment = {
 							type: 'table',
 							head: ['Feature', 'Choice', 'Why'],
 							rows: [
-								['1. Balances', 'Relational (Postgres, MySQL)', '[[acid]] transactions and constraints; a wrong answer costs money'],
-								['2. Carts', 'Key-value store (Redis, DynamoDB)', 'Always fetched by one key; [[ttl]] handles expiry; no joins needed'],
+								['1. Balances', 'Relational ([[postgresql|Postgres]], MySQL)', '[[acid]] transactions and constraints; a wrong answer costs money'],
+								['2. Carts', 'Key-value store (Redis, [[dynamodb|DynamoDB]])', 'Always fetched by one key; [[ttl]] handles expiry; no joins needed'],
 								['3. Catalogue', 'Document store, or Postgres with a JSON column', 'Flexible attributes per product; relational is still fine if you also need joins'],
 								['4. Metrics', 'Time-series database', 'Optimised for appends and time-range scans, with compression and downsampling'],
 								['5. Photos', '[[object-storage|Object storage]] + [[cdn|CDN]]', 'Large binary files; store only the URL in the database']
@@ -634,7 +634,7 @@ LIMIT 20;`
 					answer: [
 						{
 							type: 'p',
-							text: 'With autocommit, each statement commits on its own. The crash left the money **taken from `src` and never added to `dst`**: it vanished. Wrap both in one transaction so they are [[acid|atomic]]: both happen or neither does.'
+							text: 'With [[autocommit|autocommit]], each statement commits on its own. The crash left the money **taken from `src` and never added to `dst`**: it vanished. Wrap both in one transaction so they are [[acid|atomic]]: both happen or neither does.'
 						},
 						{
 							type: 'code',
@@ -890,13 +890,13 @@ def update_price(pid, price):
 					answer: [
 						{
 							type: 'p',
-							text: '**The nightly scan flushed the cache.** LRU evicts whatever was used least recently. Reading 5 million products once makes every one of them "recently used", pushing out the few thousand genuinely popular products. In the morning the cache is full of products nobody wants, the popular ones miss, and the database takes the load until the cache re-warms.'
+							text: '**The nightly scan flushed the cache.** LRU evicts whatever was used least recently. Reading 5 million products once makes every one of them "recently used", pushing out the few thousand genuinely popular products. In the morning the cache is full of products nobody wants, the popular ones miss, and the database takes the load until the cache [[cache-warming|re-warms]].'
 						},
 						{
 							type: 'list',
 							items: [
 								'Have batch jobs **bypass the cache** (read from the DB or a [[read-replica]] directly). This is the real fix.',
-								'An LFU policy (see [[lru]]) resists one-off scans, since one read doesn\'t outweigh thousands.',
+								'An [[lfu|LFU]] policy (see [[lru]]) resists one-off scans, since one read doesn\'t outweigh thousands.',
 								'Keep separate caches for separate workloads.'
 							]
 						}
@@ -922,7 +922,7 @@ def update_price(pid, price):
 					prompt: [
 						{
 							type: 'p',
-							text: '`POST /signup` creates the user (30 ms), sends a welcome email via an email provider (~1.5 s), resizes the uploaded avatar (~1 s) and notifies the CRM (~1.5 s), all before responding. When the email provider is slow, signups time out. Redesign it.'
+							text: '`POST /signup` creates the user (30 ms), sends a welcome email via an email provider (~1.5 s), resizes the uploaded avatar (~1 s) and notifies the [[crm|CRM]] (~1.5 s), all before responding. When the email provider is slow, signups time out. Redesign it.'
 						}
 					],
 					answer: [
@@ -1095,7 +1095,7 @@ def update_price(pid, price):
 						{
 							type: 'flow',
 							steps: [
-								{ label: 'DNS (one provider)' },
+								{ label: '[[dns|DNS]] (one provider)' },
 								{ label: 'One load balancer VM' },
 								{ label: '6 app servers', note: 'all in zone a' },
 								{ label: 'Redis (one node)', note: 'sessions live here' },
@@ -1179,8 +1179,8 @@ def update_price(pid, price):
 							type: 'list',
 							ordered: true,
 							items: [
-								'**10:20 latency rises first** (p50 80 → ~900 ms, p99 → ~5 s), right at the "payments slow" marker.',
-								'**Saturation climbs with it** and hits 100% around 10:25: each request now holds a worker longer ([[littles-law|Little\'s law]]: same traffic × longer time = more in flight).',
+								'**10:20 latency rises first** (p50 80 → ~900 ms, [[percentiles|p99]] → ~5 s), right at the "payments slow" marker.',
+								'**[[saturation|Saturation]] climbs with it** and hits 100% around 10:25: each request now holds a worker longer ([[littles-law|Little\'s law]]: same traffic × longer time = more in flight).',
 								'**Errors jump at 10:25**, when the pool is full: new requests can\'t get a worker and time out.',
 								'**Traffic is flat**: this is not a load spike. Adding servers isn\'t the first move.'
 							]
@@ -1404,7 +1404,7 @@ GET /posts?limit=20&cursor=2026-10-16T09:12:03Z_8841
 								['Reads/s', '39 × 100', '≈ 3,900 /s (peak maybe 10k)'],
 								['Links in 5 years', '100M × 12 × 5', '6 billion'],
 								['Storage', '6B × ~500 B', '≈ 3 TB'],
-								['Code length (base62)', '62⁶ ≈ 57 billion, 62⁷ ≈ 3.5 trillion', '7 characters: plenty of room, hard to guess']
+								['Code length ([[base62|base62]])', '62⁶ ≈ 57 billion, 62⁷ ≈ 3.5 trillion', '7 characters: plenty of room, hard to guess']
 							]
 						},
 						{ type: 'heading', text: 'API and data' },
@@ -1442,7 +1442,7 @@ links(code PRIMARY KEY, long_url, owner_id, created_at, expires_at)`
 				},
 				{
 					id: 'f-p9q2',
-					title: 'Design an API rate limiter',
+					title: 'Design an API [[rate-limiting|rate limiter]]',
 					tag: 'design',
 					minutes: 6,
 					prompt: [
@@ -1457,10 +1457,10 @@ links(code PRIMARY KEY, long_url, owner_id, created_at, expires_at)`
 							items: [
 								'**Algorithm:** [[token-bucket]], capacity 100, refill 100/60 ≈ 1.67 tokens/s. It allows bursts and enforces the average; only two numbers per key (tokens, last refill time).',
 								'**Where state lives:** in a shared Redis, not in each server\'s memory. With 20 servers each counting alone, a client spread across all of them would get 20 × 100 = 2,000 requests a minute.',
-								'**Atomicity:** read-refill-decrement must be one operation (a Redis Lua script or atomic command), or two concurrent requests can both spend the last token.',
+								'**Atomicity:** read-refill-decrement must be one operation (a Redis [[redis|Lua script]] or atomic command), or two concurrent requests can both spend the last token.',
 								'**Memory:** 10M keys × ~50 bytes ≈ 500 MB, and only active keys need entries (expire idle ones with a [[ttl]]). One Redis node is enough; replicate it for availability.',
-								'**Failure mode:** if Redis is down, *fail open* (allow requests and log it) for a normal API, or *fail closed* for an expensive or abuse-prone endpoint. Say which and why.',
-								'**Client experience:** return `429` with `Retry-After` and headers like `RateLimit-Remaining`, so well-behaved clients can slow down instead of hammering.'
+								'**Failure mode:** if Redis is down, *[[fail-open-closed|fail open]]* (allow requests and log it) for a normal API, or *fail closed* for an expensive or abuse-prone endpoint. Say which and why.',
+								'**Client experience:** return `429` with `Retry-After` (the [[retry-after|Retry-After header]] says how long to wait) and headers like `RateLimit-Remaining`, so well-behaved clients can slow down instead of hammering.'
 							]
 						},
 						{
@@ -1517,7 +1517,7 @@ links(code PRIMARY KEY, long_url, owner_id, created_at, expires_at)`
 						{
 							type: 'list',
 							items: [
-								'**Feed storage:** a capped list per user (latest ~500 post ids) in Redis or a wide-column store; hydrate post contents from a post cache.',
+								'**Feed storage:** a capped list per user (latest ~500 post ids) in Redis or a [[sql-vs-nosql|wide-column store]]; hydrate post contents from a post cache.',
 								'**Inactive users:** don\'t push to users who haven\'t opened the app in 30 days; rebuild their feed on read if they come back.',
 								'**Writes are async:** posting returns immediately; fan-out runs on a queue, so feeds are [[eventual-consistency|eventually consistent]], usually within seconds.'
 							]
@@ -1579,7 +1579,7 @@ links(code PRIMARY KEY, long_url, owner_id, created_at, expires_at)`
 							items: [
 								'**Don\'t pass bytes through API servers.** 2 GB uploads tie up servers for minutes and fill their disks. A presigned URL lets the client upload straight to object storage; your servers handle only small JSON calls.',
 								'**Multipart, resumable uploads:** split into ~10 MB parts, upload in parallel, retry failed parts only. A dropped connection at 1.9 GB doesn\'t restart from zero.',
-								'**Transcoding is slow, CPU-heavy, async work:** a [[message-queue]] feeds a scalable worker pool; status goes `uploaded → processing → ready`, and the app shows "processing" meanwhile.',
+								'**[[transcoding|Transcoding]] is slow, CPU-heavy, async work:** a [[message-queue]] feeds a scalable worker pool; status goes `uploaded → processing → ready`, and the app shows "processing" meanwhile.',
 								'**Local disk on API servers** also broke [[stateless-service|statelessness]]: the file lived on one server, so the next request to a different server couldn\'t find it.'
 							]
 						}
@@ -1606,10 +1606,10 @@ links(code PRIMARY KEY, long_url, owner_id, created_at, expires_at)`
 							items: [
 								'**Separate queues by priority:** transactional (resets, receipts) and bulk (marketing). Workers always drain transactional first, and bulk sending is throttled to leave room under the provider limit (e.g. bulk ≤ 1,700/s, keeping 300/s for transactional).',
 								'**[[rate-limiting|Rate-limit]] toward the provider**, not just from clients: a [[token-bucket]] in front of each channel.',
-								'**User preferences and suppression:** check opt-outs, quiet hours and channel choice before sending; marketing to unsubscribed users is a legal problem, not just a UX one.',
+								'**User preferences and [[suppression-list|suppression]]:** check opt-outs, quiet hours and channel choice before sending; marketing to unsubscribed users is a legal problem, not just a UX one.',
 								'**Idempotency:** a notification id per (user, event, channel), so retries after timeouts don\'t send twice ([[idempotency]]).',
 								'**Templates and fan-out:** an event like "order shipped" becomes one message per channel the user enabled ([[pub-sub]] → per-channel queues).',
-								'**Track delivery:** provider [[webhook|webhooks]] for bounces and failures; retry with [[exponential-backoff|backoff]]; [[dead-letter-queue]] after N attempts.'
+								'**Track delivery:** provider [[webhook|webhooks]] for [[transactional-email|bounces]] and failures; retry with [[exponential-backoff|backoff]]; [[dead-letter-queue]] after N attempts.'
 							]
 						}
 					]
@@ -1634,13 +1634,13 @@ links(code PRIMARY KEY, long_url, owner_id, created_at, expires_at)`
 					prompt: [
 						{
 							type: 'p',
-							text: 'The production Postgres serves the website, and also the BI team\'s dashboards, which run big aggregate queries over two years of orders whenever someone opens them. Every Monday morning the site slows down.'
+							text: 'The production Postgres serves the website, and also the [[business-intelligence|BI]] team\'s dashboards, which run big aggregate queries over two years of orders whenever someone opens them. Every Monday morning the site slows down.'
 						}
 					],
 					answer: [
 						{
 							type: 'p',
-							text: 'Analytical queries scan huge amounts of data and compete with the site\'s small, latency-sensitive queries for CPU, disk and cache. Monday morning is when everyone opens their dashboards. Move analytics to a [[read-replica]] (quick fix) or, properly, to a separate analytics warehouse fed by a nightly or streaming copy ([[change-data-capture]]). Keep the OLTP database for the product.'
+							text: 'Analytical queries scan huge amounts of data and compete with the site\'s small, latency-sensitive queries for CPU, disk and cache. Monday morning is when everyone opens their dashboards. Move analytics to a [[read-replica]] (quick fix) or, properly, to a separate analytics warehouse fed by a nightly or streaming copy ([[change-data-capture]]). Keep the [[oltp-vs-olap|OLTP]] database for the product.'
 						}
 					]
 				},
@@ -1740,7 +1740,7 @@ links(code PRIMARY KEY, long_url, owner_id, created_at, expires_at)`
 				{
 					id: 'f-p10q8',
 					group: 'Quick checks',
-					title: 'Hit rate 95% → 90%: how much more database load?',
+					title: '[[cache-hit-rate|Hit rate]] 95% → 90%: how much more database load?',
 					tag: 'teaser',
 					prompt: [],
 					answer: [{ type: 'p', text: 'Misses go from 5% to 10%: the database load **doubles**. Think in miss rate.' }]

@@ -119,7 +119,7 @@ const a6: Assessment = {
 						},
 						{
 							type: 'p',
-							text: '**After the incident:** size per-pod pools from a connection *budget* (`max_connections` ÷ max pods), cap the ASG max from downstream capacity rather than CPU, alarm on [[queue-age|age of oldest message]] (not queue depth), and ask marketing for a launch calendar. Little\'s law tells you the backlog math in advance: 1,200/s arriving vs 200/s processed fills 60k messages a minute.'
+							text: '**After the incident:** size per-pod pools from a connection *budget* (`max_connections` ÷ max pods), cap the ASG max from downstream capacity rather than CPU, alarm on [[queue-age|age of oldest message]] (not queue depth), and ask marketing for a launch calendar. [[littles-law]] tells you the backlog math in advance: 1,200/s arriving vs 200/s processed fills 60k messages a minute.'
 						}
 					]
 				},
@@ -130,7 +130,7 @@ const a6: Assessment = {
 					minutes: 10,
 					prompt: [{ type: 'lab', lab: spotWave }],
 					hints: [
-						'Watch the ASG\'s *Last activity* line after the wave. Why aren\'t replacements launching?',
+						'Watch the [[autoscaling|ASG]]\'s *Last activity* line after the wave. Why aren\'t replacements launching?',
 						'How many capacity pools does "1 pool: c6i.xlarge" give you? What would six give you?'
 					],
 					answerLabel: 'Show debrief',
@@ -149,7 +149,7 @@ const a6: Assessment = {
 								},
 								{
 									title: 'Honour the 2-minute [[interruption-notice|notice]].',
-									body: 'Even diversified, spot reclaims single instances now and then. Without a drain handler each reclaim drops in-flight requests (a burst of 5xx that keeps the 60 s stability window from completing). With it, the instance leaves the LB before it dies.'
+									body: 'Even diversified, spot reclaims single instances now and then. Without a [[connection-draining|drain handler]] each reclaim drops in-flight requests (a burst of 5xx that keeps the 60 s stability window from completing). With it, the instance leaves the LB before it dies.'
 								}
 							]
 						},
@@ -247,7 +247,7 @@ const a6: Assessment = {
 								},
 								{
 									title: 'Expect a long tail that DNS can never move.',
-									body: '6% of traffic comes from a partner JVM with `networkaddress.cache.ttl=-1` ([[dns-caching]]): it resolves once at startup and never again. Keep lb-old alive (or proxy it to lb-new) until that partner restarts, and tell them.'
+									body: '6% of traffic comes from a partner [[jvm|JVM]] with `networkaddress.cache.ttl=-1` ([[dns-caching]]): it resolves once at startup and never again. Keep lb-old alive (or proxy it to lb-new) until that partner restarts, and tell them.'
 								}
 							]
 						},
@@ -259,7 +259,7 @@ const a6: Assessment = {
 						},
 						{
 							type: 'p',
-							text: '**After:** migration runbooks with "lower TTL ≥ 1 old-TTL before", traffic-based (not time-based) decommission gates ("delete when lb-old < 0.1% for 24 h"), and a client-side DNS TTL requirement in partner integration docs.'
+							text: '**After:** migration runbooks with "lower TTL ≥ 1 old-TTL before", traffic-based (not time-based) decommission gates ("delete when lb-old < 0.1% for 24 h"), and a client-side [[dns-ttl]] requirement in partner integration docs.'
 						}
 					]
 				},
@@ -271,13 +271,13 @@ const a6: Assessment = {
 					prompt: [
 						{
 							type: 'p',
-							text: 'Security tightened the public subnet\'s network ACL on Tuesday. Since then, every request to the ALB times out. Security groups are unchanged and allow 443 from anywhere. The ALB itself reports no errors and almost no requests.'
+							text: 'Security tightened the public subnet\'s network ACL on Tuesday. Since then, every request to the [[load-balancer|ALB]] times out. [[security-group|Security groups]] are unchanged and allow 443 from anywhere. The ALB itself reports no errors and almost no requests.'
 						},
 						{
 							type: 'table',
-							head: ['Rule #', 'Direction', 'Protocol', 'Ports', 'CIDR', 'Action'],
+							head: ['Rule #', 'Direction', 'Protocol', 'Ports', '[[cidr|CIDR]]', 'Action'],
 							rows: [
-								['100', 'Inbound', 'TCP', '443', '0.0.0.0/0', 'ALLOW'],
+								['100', 'Inbound', '[[tcp|TCP]]', '443', '0.0.0.0/0', 'ALLOW'],
 								['110', 'Inbound', 'TCP', '1024–65535', '10.0.0.0/16', 'ALLOW'],
 								['*', 'Inbound', 'All', 'All', '0.0.0.0/0', 'DENY'],
 								['100', 'Outbound', 'TCP', '443', '0.0.0.0/0', 'ALLOW'],
@@ -289,7 +289,7 @@ const a6: Assessment = {
 					answer: [
 						{
 							type: 'p',
-							text: '[[nacl|NACLs]] are **stateless**. The client\'s SYN arrives on 443 (inbound rule 100 ✓). The ALB\'s reply goes *to the client\'s* [[ephemeral-ports|ephemeral port]] (e.g. 51234) on the internet: outbound rule 100 only allows destination port 443, and rule 110 only allows 8080 inside the VPC, so the reply hits `*` DENY. The client retries the SYN until it times out. The ALB never sees a complete connection, hence "no errors, almost no requests".'
+							text: '[[nacl|NACLs]] are **stateless**. The client\'s [[tcp-handshake|SYN]] arrives on 443 (inbound rule 100 ✓). The ALB\'s reply goes *to the client\'s* [[ephemeral-ports|ephemeral port]] (e.g. 51234) on the internet: outbound rule 100 only allows destination port 443, and rule 110 only allows 8080 inside the VPC, so the reply hits `*` DENY. The client retries the SYN until it times out. The ALB never sees a complete connection, hence "no errors, almost no requests".'
 						},
 						{
 							type: 'p',
@@ -299,7 +299,7 @@ const a6: Assessment = {
 							type: 'callout',
 							tone: 'info',
 							title: 'How to prove it in 2 minutes',
-							text: 'VPC Flow Logs on the ALB ENIs: `ACCEPT` for inbound 443 and `REJECT` for the outbound reply to the high port. Reachability Analyzer names the NACL rule. Timeouts (not refusals) right after a network change point to NACLs or routes, not apps.'
+							text: '[[vpc-flow-logs]] on the ALB ENIs: `ACCEPT` for inbound 443 and `REJECT` for the outbound reply to the high port. [[reachability-analyzer]] names the NACL rule. Timeouts (not refusals) right after a network change point to NACLs or routes, not apps.'
 						},
 						{
 							type: 'p',
@@ -337,7 +337,7 @@ const a6: Assessment = {
 						{
 							type: 'list',
 							items: [
-								'**Right fix:** a NAT gateway *in az-c* (keeps the AZ independence the engineer wanted) and `0.0.0.0/0 → nat-0c3` in `rtb-app-c`.',
+								'**Right fix:** a [[nat-gateway]] *in az-c* (keeps the [[availability-zone|AZ]] independence the engineer wanted) and `0.0.0.0/0 → nat-0c3` in `rtb-app-c`.',
 								'**Also missing:** the S3 [[vpc-endpoint|gateway endpoint]] association; az-c will pay NAT rates for S3 that az-a doesn\'t.',
 								'**Wrong fix:** giving app instances public IPs to make the IGW route work: it exposes them directly and the subnet stops being private.'
 							]
@@ -389,7 +389,7 @@ const a6: Assessment = {
 							type: 'callout',
 							tone: 'warn',
 							title: 'Why "100% to west, now" loses',
-							text: 'It turns a 60%-error regional problem into a 90%-error overload, then plateaus at 60% because the fleet can\'t grow past 16. A [[warm-standby]] is only as good as its ability to scale; that ability is quotas, capacity and AMIs in the *other* region.'
+							text: 'It turns a 60%-error regional problem into a 90%-error overload, then plateaus at 60% because the fleet can\'t grow past 16. A [[warm-standby]] is only as good as its ability to scale; that ability is quotas, capacity and [[ami|AMIs]] in the *other* region.'
 						},
 						{
 							type: 'p',
@@ -432,7 +432,7 @@ const a6: Assessment = {
 						},
 						{
 							type: 'p',
-							text: '**Rebooting the writer** is the other tempting move. It adds a minute of guaranteed write outage and changes nothing on the app side. **After:** use the cluster endpoint (never instance endpoints), a driver that understands failover (AWS JDBC wrapper / `targetServerType=primary`), a test that runs `failover-db-cluster` in staging weekly, and an alert on "write errors with healthy DB" as its own signature.'
+							text: '**Rebooting the writer** is the other tempting move. It adds a minute of guaranteed write outage and changes nothing on the app side. **After:** use the cluster endpoint (never instance endpoints), a driver that understands failover ([[failover-aware-driver|AWS JDBC wrapper]] / `targetServerType=primary`), a test that runs `failover-db-cluster` in staging weekly, and an alert on "write errors with healthy DB" as its own signature.'
 						}
 					]
 				},
@@ -466,7 +466,7 @@ const a6: Assessment = {
 							type: 'callout',
 							tone: 'warn',
 							title: 'The two traps',
-							text: '**Growing the EBS volume** changes the block device, not the filesystem: until `growpart` + `resize2fs` run, `df` doesn\'t move ([[filesystem-resize]]); and even then the bot refills it. **Deleting /var/log/*.gz** frees 41 GB of bytes and zero inodes. Both look productive in a status update.'
+							text: '**Growing the [[ebs|EBS]] volume** changes the block device, not the filesystem: until `growpart` + `resize2fs` run, `df` doesn\'t move ([[filesystem-resize]]); and even then the bot refills it. **Deleting /var/log/*.gz** frees 41 GB of bytes and zero inodes. Both look productive in a status update.'
 						},
 						{
 							type: 'p',
@@ -492,8 +492,8 @@ const a6: Assessment = {
 					minutes: 10,
 					prompt: [{ type: 'lab', lab: natEgress }],
 					hints: [
-						'Open **Cost Explorer (live)** first. Which usage type is the money in?',
-						'The pipeline reads from S3 in the same region. Why does that traffic go through a NAT at all?'
+						'Open **[[cost-explorer]] (live)** first. Which usage type is the money in?',
+						'The pipeline reads from [[object-storage|S3]] in the same region. Why does that traffic go through a NAT at all?'
 					],
 					answerLabel: 'Show debrief',
 					answer: [
@@ -597,7 +597,7 @@ const a6: Assessment = {
 					answer: [
 						{
 							type: 'p',
-							text: '`DataTransfer-Regional-Bytes` jumps from ~$120/day to ~$1,150/day on Oct 2, exactly at the mesh 1.4 rollout marker; inter-AZ bytes go up ~10×. Requests and instance-hours are flat, so this is not growth. The leading hypothesis: the mesh upgrade changed load balancing from **zone-aware (locality) routing to plain round-robin**, so ~2/3 of calls now cross AZs instead of staying local, and every byte is billed both ways ([[cross-az-transfer]]).'
+							text: '`DataTransfer-Regional-Bytes` jumps from ~$120/day to ~$1,150/day on Oct 2, exactly at the mesh 1.4 rollout marker; inter-AZ bytes go up ~10×. Requests and instance-hours are flat, so this is not growth. The leading hypothesis: the mesh upgrade changed load balancing from **zone-aware (locality) routing to plain [[round-robin|round-robin]]**, so ~2/3 of calls now cross AZs instead of staying local, and every byte is billed both ways ([[cross-az-transfer]]).'
 						},
 						{
 							type: 'list',
@@ -684,7 +684,7 @@ Plan: 2 to add, 0 to change, 2 to destroy.`
 							type: 'callout',
 							tone: 'warn',
 							title: 'Also replaced: the security group',
-							text: 'Renaming a security group forces replacement. With `create_before_destroy` absent, the old SG is destroyed first, which fails (in use) or, worse, briefly detaches the DB from its rules. Plans are read **line by line**, not by the summary at the bottom.'
+							text: 'Renaming a security group forces replacement. With [[create-before-destroy|create_before_destroy]] absent, the old SG is destroyed first, which fails (in use) or, worse, briefly detaches the DB from its rules. Plans are read **line by line**, not by the summary at the bottom.'
 						}
 					]
 				},
@@ -750,13 +750,13 @@ Lock Info:
 						},
 						{
 							type: 'p',
-							text: 'The exporter calls `PutObject` to `reports-prod` (in eu-west-1) with default settings and gets `AccessDenied`. The on-call engineer\'s fix is to add `"Action": "s3:*"` to the boundary. Will it work? What will?'
+							text: 'The exporter calls `PutObject` to `reports-prod` (in eu-west-1) with default settings and gets `AccessDenied`. The on-call engineer\'s fix is to add `"Action": "s3:*"` to the [[permission-boundary|boundary]]. Will it work? What will?'
 						}
 					],
 					answer: [
 						{
 							type: 'p',
-							text: 'Walk the [[iam-evaluation|evaluation order]]. **[[explicit-deny|Explicit denies]] first:** the bucket policy denies `PutObject` unless the request sets SSE-KMS. Default settings send no such header, so the request is explicitly denied. Nothing else matters after that: no Allow anywhere can override it.'
+							text: 'Walk the [[iam-evaluation|evaluation order]]. **[[explicit-deny|Explicit denies]] first:** the bucket policy denies `PutObject` unless the request sets [[kms|SSE-KMS]]. Default settings send no such header, so the request is explicitly denied. Nothing else matters after that: no Allow anywhere can override it.'
 						},
 						{
 							type: 'list',
@@ -764,7 +764,7 @@ Lock Info:
 								'**Boundary edit:** irrelevant; `PutObject` was already in the boundary. Widening it to `s3:*` only expands blast radius.',
 								'**SCP:** irrelevant; eu-west-1 is allowed.',
 								'**Fix:** send `x-amz-server-side-encryption: aws:kms` (and the key id), *and* make sure the role is allowed to `kms:GenerateDataKey` on that key; otherwise you trade an S3 AccessDenied for a KMS one. Alternatively set default bucket encryption to SSE-KMS and relax the bucket policy accordingly.',
-								'**Read the error.** Modern AccessDenied messages say *"…with an explicit deny in a resource-based policy"*. That one sentence saves the hour.'
+								'**Read the error.** Modern AccessDenied messages say *"…with an explicit deny in a [[resource-based-policy|resource-based policy]]"*. That one sentence saves the hour.'
 							]
 						}
 					]
@@ -778,7 +778,7 @@ Lock Info:
 						{
 							type: 'list',
 							items: [
-								'Postgres, 4.2 TB, daily snapshot at 02:00 plus continuous WAL archiving to S3.',
+								'Postgres, 4.2 TB, daily snapshot at 02:00 plus continuous [[write-ahead-log|WAL]] archiving to S3.',
 								'Business-stated objectives: **RTO 1 h, RPO 5 min**.',
 								'Last restore test: never. Snapshot restores create a new volume that lazy-loads blocks from S3 on first read.'
 							]
@@ -799,7 +799,7 @@ Lock Info:
 								},
 								{
 									title: 'Change the architecture if the gap is real.',
-									body: 'A streaming replica in another AZ (and ideally region) promoted on failure meets RTO 1 h easily; backups remain for corruption and "oops" deletes (which replicas faithfully copy). Pre-warm restores (fast snapshot restore / initialize volumes) if restore remains part of the plan.'
+									body: 'A streaming replica in another AZ (and ideally region) promoted on failure meets RTO 1 h easily; backups remain for corruption and "oops" deletes (which replicas faithfully copy). Pre-warm restores ([[lazy-snapshot-restore|fast snapshot restore]] / initialize volumes) if restore remains part of the plan.'
 								}
 							]
 						},
@@ -852,7 +852,7 @@ Lock Info:
 					id: 't5',
 					title: 'Spot notice',
 					tag: 'teaser',
-					prompt: [{ type: 'p', text: 'How much warning does a spot instance get, and name two things your app must do with it.' }],
+					prompt: [{ type: 'p', text: 'How much warning does a [[spot-instance|spot instance]] get, and name two things your app must do with it.' }],
 					answer: [{ type: 'p', text: '**~2 minutes.** Deregister/fail the LB health check so no new requests arrive, and drain or checkpoint in-flight work (stop pulling from queues, finish or release messages). See [[interruption-notice]].' }]
 				},
 				{
@@ -860,7 +860,7 @@ Lock Info:
 					title: '`df` says 38%',
 					tag: 'teaser',
 					prompt: [{ type: 'p', text: 'Writes fail with `No space left on device`. Name two causes besides bytes.' }],
-					answer: [{ type: 'p', text: '[[inode|Inode]] exhaustion (`df -i`), a deleted-but-still-open file held by a process (space not freed until it closes: `lsof +L1`), reserved blocks for root on ext4, or a full *different* mount (e.g. `/tmp` or the overlay layer).' }]
+					answer: [{ type: 'p', text: '[[inode|Inode]] exhaustion (`df -i`), a deleted-but-still-open file held by a process (space not freed until it closes; [[lsof]] finds it: `lsof +L1`), reserved blocks for root on ext4, or a full *different* mount (e.g. `/tmp` or the overlay layer).' }]
 				},
 				{
 					id: 't7',

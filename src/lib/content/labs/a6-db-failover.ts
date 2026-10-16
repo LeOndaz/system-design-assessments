@@ -19,7 +19,7 @@ const lab: Lab = {
 	console: 'cloud',
 	scope: 'shop · eu-west-1',
 	brief:
-		'At T+0:05 the Aurora writer `shop-db-a` lost its host. The cluster [[failover|failed over]] to `shop-db-b` in ~30 s, as designed. The storefront still loads, but **every order write fails**. Platform reminds you a **planned maintenance failover happens at T+7:00**.',
+		'At T+0:05 the [[amazon-rds|Aurora]] writer `shop-db-a` lost its host. The cluster [[failover|failed over]] to `shop-db-b` in ~30 s, as designed. The storefront still loads, but **every order write fails**. Platform reminds you a **planned maintenance failover happens at T+7:00**.',
 	resources: [
 		{
 			id: 'cluster',

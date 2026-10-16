@@ -130,7 +130,7 @@ const assessment: Assessment = {
 			nav: '1 · Incidents',
 			eyebrow: 'Part 1 · 40 minutes · scenarios',
 			title: 'Distributed incidents',
-			meta: 'Kafka · service mesh · Kubernetes · sagas',
+			meta: '[[kafka|Kafka]] · service mesh · [[kubernetes|Kubernetes]] · sagas',
 			minutes: 40,
 			intro: [
 				{
@@ -200,7 +200,7 @@ const assessment: Assessment = {
 							items: [
 								{
 									title: '**[[consumer-rebalance|Rebalance storm]]: batches now take longer than `max.poll.interval.ms`.**',
-									body: 'Before 09:20: 500 records × 80 ms ≈ 40 s per batch. After `fraud-api` p99 jumped to ~900 ms: 500 × 0.9 s ≈ 450 s, above the 300 s threshold drawn on the batch panel. The broker evicts the consumer mid-batch, its partitions move to another member, which is just as slow and is evicted too. Rebalance bars start at ~09:26, a few minutes after the latency step, exactly one batch-length later. Consumption pauses during every rebalance, so consume rate drops 80% while produce rate is flat, and lag grows linearly.',
+									body: 'Before 09:20: 500 records × 80 ms ≈ 40 s per batch. After `fraud-api` p99 jumped to ~900 ms: 500 × 0.9 s ≈ 450 s, above the 300 s threshold drawn on the batch panel. The broker evicts the consumer mid-batch, its partitions move to another member, which is just as slow and is evicted too. Rebalance bars start at ~09:26, a few minutes after the latency step, exactly one batch-length later. Consumption pauses during every rebalance, so consume rate drops 80% while produce rate is flat, and [[consumer-lag|lag]] grows linearly.',
 									confirm: 'Consumer logs for `CommitFailedException` / "member … has left the group because the poll interval was exceeded"; group coordinator logs showing generation ids climbing every few minutes.'
 								},
 								{
@@ -309,7 +309,7 @@ const assessment: Assessment = {
 								},
 								{
 									title: '**Scaling beyond the partition count adds idle consumers.**',
-									body: '6 partitions → at most 6 active consumers. enricher-6 … 11 have no partitions (0 records/s). The scale-out even caused a rebalance that paused everyone briefly.'
+									body: '6 partitions → at most 6 active consumers. enricher-6 … 11 have no partitions (0 records/s). The scale-out even caused a [[consumer-rebalance|rebalance]] that paused everyone briefly.'
 								}
 							]
 						},
@@ -324,7 +324,7 @@ const assessment: Assessment = {
 							items: [
 								'**Ask first: what ordering do you actually need?** If only per-entity ordering matters (per order, per user), key by that instead of tenant. Northwind\'s traffic then spreads across all partitions.',
 								'**If per-tenant ordering is required for some event types,** split them: keep those on a tenant-keyed topic, move the rest to an entity-keyed topic.',
-								'**Salting the hot key** (`northwind#0 … #7`) spreads load but breaks per-tenant ordering. Fine only if consumers don\'t need it.',
+								'**Salting the [[hot-partition|hot key]]** (`northwind#0 … #7`) spreads load but breaks per-tenant ordering. Fine only if consumers don\'t need it.',
 								'**Parallelise inside the partition:** the consumer fans records out to workers keyed by a finer id (per-key ordering preserved, partition ordering relaxed), committing only the contiguous completed prefix of offsets.',
 								'**Adding partitions alone doesn\'t help:** northwind still hashes to one partition, and changing the partition count remaps keys, which temporarily breaks ordering for everyone.'
 							]
@@ -385,7 +385,7 @@ const assessment: Assessment = {
 								},
 								{
 									title: '**The retries turned "slow" into "down".**',
-									body: 'Inventory p99 approached 1 s, right at the per-try timeout. Every try that crossed 1 s was abandoned by the mesh but still ran to completion on the server, holding a DB connection. 9× load filled the 50-connection pool, so p99 pinned at the timeout and *every* try failed. Classic [[retry-storm]] leading to a [[cascading-failure]].',
+									body: 'Inventory [[percentiles|p99]] approached 1 s, right at the per-try [[timeout|timeout]]. Every try that crossed 1 s was abandoned by the mesh but still ran to completion on the server, holding a DB connection. 9× load filled the 50-connection pool, so p99 pinned at the timeout and *every* try failed. Classic [[retry-storm]] leading to a [[cascading-failure]].',
 									confirm: 'Server-side request duration vs client-side: the server keeps completing work the client already dropped.'
 								},
 								{
@@ -409,7 +409,7 @@ const assessment: Assessment = {
 					prompt: [
 						{
 							type: 'p',
-							text: 'Users report: "checkout said something went wrong, so I tried again, and now I have two charges". Gateway timeout is 2 s. Each service sets its own client timeouts (pricing 5 s, payment 10 s).'
+							text: 'Users report: "checkout said something went wrong, so I tried again, and now I have two charges". Gateway [[timeout|timeout]] is 2 s. Each service sets its own client timeouts (pricing 5 s, payment 10 s).'
 						},
 						{
 							type: 'trace',
@@ -449,7 +449,7 @@ const assessment: Assessment = {
 							items: [
 								{
 									title: '**No [[deadline-propagation]]: the backend kept working after the client was told it failed.**',
-									body: 'The gateway gave up at 2,000 ms. `order-svc` didn\'t know and carried on for another ~4.8 s, including authorising the card at 4,320 ms, *after* the user had already seen an error. Timeouts are inverted: inner timeouts (5 s, 10 s) are longer than the outer one (2 s), so the inner calls can never usefully finish in time.',
+									body: 'The gateway gave up at 2,000 ms. `order-svc` didn\'t know and carried on for another ~4.8 s, including [[auth-and-capture|authorising the card]] at 4,320 ms, *after* the user had already seen an error. Timeouts are inverted: inner timeouts (5 s, 10 s) are longer than the outer one (2 s), so the inner calls can never usefully finish in time.',
 									confirm: 'Count traces where a span with side effects starts after the root span has ended.'
 								},
 								{
@@ -476,7 +476,7 @@ const assessment: Assessment = {
 					tag: 'core',
 					minutes: 4,
 					prompt: [
-						{ type: 'p', text: 'Rolling deploys of `api` (12 pods, `maxUnavailable: 2`). Each deploy produces ~90 seconds of 502/503 errors. A teammate thinks new pods are being sent traffic before they\'re warm.' },
+						{ type: 'p', text: '[[rolling-update|Rolling deploys]] of `api` (12 pods, `maxUnavailable: 2`). Each deploy produces ~90 seconds of 502/503 errors. A teammate thinks new pods are being sent traffic before they\'re warm.' },
 						{
 							type: 'dashboard',
 							dashboard: {
@@ -525,11 +525,11 @@ const assessment: Assessment = {
 							type: 'callout',
 							tone: 'warn',
 							title: 'Red herring: CPU spikes on new pods',
-							text: 'The max-pod CPU spikes to ~96% on every deploy because new pods warm up (JIT, caches). It lines up with the errors in time, which is why it\'s tempting, but the readiness probe already keeps unready pods out (startup 4 s, then "Ready"), and no error references a new pod\'s IP.'
+							text: 'The max-pod CPU spikes to ~96% on every deploy because new pods warm up (JIT, caches). It lines up with the errors in time, which is why it\'s tempting, but the [[readiness-probe|readiness probe]] already keeps unready pods out (startup 4 s, then "Ready"), and no error references a new pod\'s IP.'
 						},
 						{
 							type: 'p',
-							text: '**Fix:** a `preStop` hook that sleeps ~10 s (keep serving while endpoint removal propagates); on SIGTERM fail readiness, stop accepting new connections, send `Connection: close` on responses, wait for in-flight to finish, then exit; `terminationGracePeriodSeconds` larger than preStop + longest request; `maxUnavailable: 0, maxSurge: 2` so capacity never dips. **Test it:** run a load test during a deploy and assert zero 5xx.'
+							text: '**Fix:** a `preStop` [[prestop-hook|hook]] that sleeps ~10 s (keep serving while endpoint removal propagates); on SIGTERM fail readiness, stop accepting new connections, send `Connection: close` on responses, wait for in-flight to finish, then exit; `terminationGracePeriodSeconds` larger than preStop + longest request; `maxUnavailable: 0, maxSurge: 2` so capacity never dips. **Test it:** run a load test during a deploy and assert zero 5xx.'
 						}
 					]
 				},
@@ -571,7 +571,7 @@ const assessment: Assessment = {
 								]
 							}
 						},
-						{ type: 'p', text: '**Explain why the outage outlived the failover by half an hour.**' }
+						{ type: 'p', text: '**Explain why the outage outlived the [[failover|failover]] by half an hour.**' }
 					],
 					answer: [
 						{
@@ -584,7 +584,7 @@ const assessment: Assessment = {
 								},
 								{
 									title: '**Then synchronized cold starts kept failing the probe.**',
-									body: 'All 8 pods restarted together, each opened 50 connections at once (8 × 50 = 400 → the DB connection spikes hitting `max_connections`) and ran a heavy cache warm-up. Startup took longer than the liveness delay + 1 s timeout, so they were killed again mid-warm-up, every ~70 s, until CrashLoopBackOff spaced them out further. The system had been pushed into a self-sustaining failure loop ([[metastable-failure]]).',
+									body: 'All 8 pods restarted together, each opened 50 connections at once (8 × 50 = 400 → the DB connection spikes hitting `max_connections`) and ran a heavy cache warm-up. Startup took longer than the liveness delay + 1 s timeout, so they were killed again mid-warm-up, every ~70 s, until [[crashloopbackoff|CrashLoopBackOff]] spaced them out further. The system had been pushed into a self-sustaining failure loop ([[metastable-failure]]).',
 									confirm: 'Restart bars repeat every ~3 points; connection spikes coincide with each restart wave.'
 								}
 							]
@@ -594,7 +594,7 @@ const assessment: Assessment = {
 							items: [
 								'**Liveness** = "is this process wedged?" Check only in-process things (event loop responsive, not deadlocked). Never a shared dependency.',
 								'**[[readiness-probe|Readiness]]** may consider dependencies, but think about what happens when *all* pods fail it together: zero endpoints. Often better to stay ready and return fast errors or degraded responses.',
-								'**Startup probe** with a generous budget for warm-up, so liveness doesn\'t apply until the app has started.',
+								'**[[startup-probe|Startup probe]]** with a generous budget for warm-up, so liveness doesn\'t apply until the app has started.',
 								'Lazy or background cache warm-up; jittered startup; smaller initial pool sizes.'
 							]
 						}
@@ -606,7 +606,7 @@ const assessment: Assessment = {
 					tag: 'tricky',
 					minutes: 4,
 					prompt: [
-						{ type: 'p', text: '`recommendations` is a gRPC service called by `web-bff`. HPA scaled it from 3 to 6 pods at 11:20 when CPU passed 70%. Latency kept rising. `kubectl get endpoints` shows 6 ready pods.' },
+						{ type: 'p', text: '`recommendations` is a [[grpc|gRPC]] service called by `web-bff`. [[horizontal-pod-autoscaler|HPA]] scaled it from 3 to 6 pods at 11:20 when CPU passed 70%. Latency kept rising. `kubectl get endpoints` shows 6 ready pods.' },
 						{
 							type: 'dashboard',
 							dashboard: {
@@ -654,7 +654,7 @@ const assessment: Assessment = {
 					answer: [
 						{
 							type: 'p',
-							text: '**gRPC runs on HTTP/2, which multiplexes all requests over a few [[http2-connection-reuse|long-lived connections]].** A Kubernetes ClusterIP Service balances at L4, i.e. *per connection*, when the connection is opened. `web-bff` opened its connections to pods a–c hours ago and never needs to open new ones, so pods d–f get only the occasional new connection (~12 rps). Endpoints are ready; nobody is using them.'
+							text: '**gRPC runs on HTTP/2, which multiplexes all requests over a few [[http2-connection-reuse|long-lived connections]].** A Kubernetes ClusterIP Service balances at [[l4-vs-l7-load-balancing|L4]], i.e. *per connection*, when the connection is opened. `web-bff` opened its connections to pods a–c hours ago and never needs to open new ones, so pods d–f get only the occasional new connection (~12 rps). Endpoints are ready; nobody is using them.'
 						},
 						{
 							type: 'callout',
@@ -678,7 +678,7 @@ const assessment: Assessment = {
 					tag: 'core',
 					minutes: 4,
 					prompt: [
-						{ type: 'p', text: 'Managed Postgres failed over at 03:12. The DB hostname is unchanged; it now resolves to a new IP. `billing-api` (Python) recovered almost immediately. `orders-api` (Java, HikariCP) kept failing until someone restarted it at 03:52.' },
+						{ type: 'p', text: 'Managed Postgres failed over at 03:12. The DB hostname is unchanged; it now resolves to a new IP. `billing-api` (Python) recovered almost immediately. `orders-api` (Java, [[connection-pool|HikariCP]]) kept failing until someone restarted it at 03:52.' },
 						{
 							type: 'logs',
 							logs: {
@@ -705,14 +705,14 @@ const assessment: Assessment = {
 					answer: [
 						{
 							type: 'p',
-							text: '**[[dns-caching|Stale DNS]].** The `resolved_ip` field gives it away: billing-api re-resolved to `10.0.7.88` within 30 s; orders-api kept dialling the old primary `10.0.4.17` for 40 minutes, even for *new* connections. The JVM caches successful DNS lookups in-process (`networkaddress.cache.ttl`; some setups and older versions cache forever), ignoring the record\'s TTL. The restart cleared the cache.'
+							text: '**[[dns-caching|Stale DNS]].** The `resolved_ip` field gives it away: billing-api re-resolved to `10.0.7.88` within 30 s; orders-api kept dialling the old primary `10.0.4.17` for 40 minutes, even for *new* connections. The JVM caches successful DNS lookups in-process (`networkaddress.cache.ttl`; some setups and older versions cache forever), ignoring the record\'s [[ttl|TTL]]. The restart cleared the cache.'
 						},
 						{
 							type: 'list',
 							items: [
 								'Set `networkaddress.cache.ttl` to a few seconds (in `java.security` or `-Dsun.net.inetaddr.ttl`), below the DNS record\'s TTL.',
 								'Configure the pool to validate and recycle connections: `maxLifetime`, connection test on borrow, short connect timeout, so dead sockets are dropped quickly.',
-								'Use the cloud provider\'s JDBC wrapper or a proxy (RDS Proxy / PgBouncer) that handles failover.',
+								'Use the cloud provider\'s JDBC wrapper or a proxy (RDS Proxy / [[pgbouncer|PgBouncer]]) that handles failover.',
 								'**Test failover regularly** in staging and record time-to-recover per service. The fact that one service recovered and another didn\'t is only discovered by drills or incidents.'
 							]
 						}
@@ -749,9 +749,9 @@ const assessment: Assessment = {
 						{
 							type: 'list',
 							items: [
-								'**Now:** cordon and drain the node; fix time sync (security groups blocking NTP? removed time source?). Alert on clock offset per node.',
+								'**Now:** [[cordon-and-drain|cordon and drain]] the node; fix time sync (security groups blocking [[ntp|NTP]]? removed time source?). Alert on clock offset per node.',
 								'**Fix:** allow ~30–60 s leeway when validating `iat`/`nbf`/[[jwt|exp]].',
-								'**Also likely broken on that node:** anything comparing its timestamps to others: "last write wins" conflict resolution, [[distributed-lock]] lease expiry, cache [[ttl|TTLs]] set by absolute time, log ordering across services, signed URL / webhook signature timestamp checks, and events ordered by `created_at`.'
+								'**Also likely broken on that node:** anything comparing its timestamps to others: "[[last-writer-wins|last write wins]]" conflict resolution, [[distributed-lock]] lease expiry, cache [[ttl|TTLs]] set by absolute time, log ordering across services, signed URL / webhook signature timestamp checks, and events ordered by `created_at`.'
 							]
 						}
 					]
@@ -805,7 +805,7 @@ const assessment: Assessment = {
 						},
 						{
 							type: 'p',
-							text: '**At 10:12:** [[load-shedding|shed load]] at the edge (rate-limit to ~1,100 rps, return 503 fast with `Retry-After`), flush queues; ramp up after goodput recovers. **Fix:** bounded queues with a queue timeout (drop requests older than the client timeout), LIFO-ish dequeue under overload, client [[retry-budget|retry budgets]] with [[exponential-backoff]] and [[jitter]], [[circuit-breaker|circuit breakers]] in the apps.'
+							text: '**At 10:12:** [[load-shedding|shed load]] at the edge ([[rate-limiting|rate-limit]] to ~1,100 rps, return 503 fast with `Retry-After`), flush queues; ramp up after [[goodput|goodput]] recovers. **Fix:** bounded queues with a queue timeout (drop requests older than the client timeout), LIFO-ish dequeue under overload, client [[retry-budget|retry budgets]] with [[exponential-backoff]] and [[jitter]], [[circuit-breaker|circuit breakers]] in the apps.'
 						}
 					]
 				},
@@ -929,7 +929,7 @@ reply to the tickets proactively.`
 					tag: 'core',
 					group: 'Bug hunts',
 					prompt: [
-						{ type: 'p', text: 'Missing orders cluster around broker maintenance windows and deploys. No errors are logged.' },
+						{ type: 'p', text: 'Missing orders cluster around [[message-queue|broker]] maintenance windows and deploys. No errors are logged.' },
 						{
 							type: 'code',
 							lang: 'python',
@@ -966,7 +966,7 @@ def create_order(req):
 					tag: 'tricky',
 					group: 'Bug hunts',
 					prompt: [
-						{ type: 'p', text: 'The team adopted the outbox pattern after the previous bug. The relay never logs an error. The missing events are always ones whose transaction took a long time.' },
+						{ type: 'p', text: 'The team adopted the [[transactional-outbox|outbox pattern]] after the previous bug. The relay never logs an error. The missing events are always ones whose transaction took a long time.' },
 						{
 							type: 'code',
 							lang: 'python',
@@ -1003,7 +1003,7 @@ def create_order(req):
 						{
 							type: 'list',
 							items: [
-								'**Fix:** select by state, not by cursor: `WHERE published_at IS NULL ORDER BY id LIMIT 500 FOR UPDATE SKIP LOCKED`, then mark rows published. Or use [[change-data-capture|CDC]], which reads the commit log in commit order.',
+								'**Fix:** select by state, not by cursor: `WHERE published_at IS NULL ORDER BY id LIMIT 500 FOR UPDATE SKIP LOCKED` (a [[select-for-update|locking read]] that skips rows another relay already holds), then mark rows published. Or use [[change-data-capture|CDC]], which reads the commit log in commit order.',
 								'**Second bug:** a crash after publishing but before `state.set` republishes up to 500 events. That\'s acceptable [[at-least-once]] behaviour, as long as consumers are [[idempotent-consumer|idempotent]]; say so explicitly.',
 								'**Remediate:** find outbox rows with no corresponding published record (or with id ≤ the current cursor and never published) and publish them.'
 							]
@@ -1123,7 +1123,7 @@ while (running) {
 							items: [
 								{
 									title: '**The lease expires while the holder is still working.**',
-									body: 'The lock lives 60 s; the job takes 90 s. At t = 60 s the key expires, a second instance acquires it and starts from the first customer. Both are now inserting invoices. A [[distributed-lock]] with a TTL is only a hint, never a guarantee; a [[gc-pause]] or slow network can cause the same thing even when the job is normally fast.'
+									body: 'The lock lives 60 s; the job takes 90 s. At t = 60 s the [[redis|Redis]] key expires, a second instance acquires it and starts from the first customer. Both are now inserting invoices. A [[distributed-lock]] with a TTL is only a hint, never a guarantee; a [[gc-pause]] or slow network can cause the same thing even when the job is normally fast.'
 								},
 								{
 									title: '**`finally` deletes someone else\'s lock.**',
@@ -1136,7 +1136,7 @@ while (running) {
 							items: [
 								'**The real fix is in the database, not the lock:** a unique constraint on `(customer_id, billing_period)` and `INSERT … ON CONFLICT DO NOTHING`. Now the job is [[idempotency|idempotent]]: running it twice, or three instances at once, produces one invoice per customer.',
 								'If exclusivity must be enforced on a resource, use a [[fencing-token]] checked by that resource.',
-								'Lease renewal (heartbeat extends the TTL) reduces but doesn\'t remove the risk.',
+								'Lease renewal ([[heartbeat|heartbeat]] extends the TTL) reduces but doesn\'t remove the risk.',
 								'**Remediate:** void the duplicate invoices before they\'re charged or emailed; tell finance which ones.'
 							]
 						}
@@ -1308,6 +1308,7 @@ Follow-ups
 - Audit other producer.send() call sites (found 3 more: refunds, signups,
   address changes).`
 						},
+						{ type: 'p', text: 'Note how the root cause names the mechanism precisely: a [[dual-write]], where the database and the broker are updated separately with nothing tying them together.' },
 						{
 							type: 'p',
 							text: 'Notice: line number, mechanism for *both* loss paths, how the start date was found, a count with how it was computed, the test that proves the fix, the data repair, and the audit of sibling call sites. That last item is the "contribution beyond the AI output" reviewers look for.'
@@ -1328,7 +1329,7 @@ Follow-ups
 			intro: [
 				{
 					type: 'p',
-					text: 'Events about orders arrive from a broker with [[at-least-once]] delivery. They can be duplicated and, because they come from several producers and retries, reordered. Build the read model anyway.'
+					text: 'Events about orders arrive from a broker with [[at-least-once]] delivery. They can be duplicated and, because they come from several producers and retries, reordered. Build the [[cqrs-read-model|read model]] anyway.'
 				},
 				{
 					type: 'code',
@@ -1561,7 +1562,7 @@ def test_any_delivery_order_gives_same_state():
         s = p.state("A")
         assert (s.status, s.total_cents, s.version) == ("shipped", 4500, 4)`
 						},
-						{ type: 'p', text: 'The last test is the one that impresses: a property ("every permutation with duplicates converges to the same state") rather than one hand-picked example.' }
+						{ type: 'p', text: 'The last test is the one that impresses: a [[property-based-testing|property]] ("every permutation with duplicates converges to the same state") rather than one hand-picked example.' }
 					]
 				},
 				{
@@ -1588,7 +1589,7 @@ def test_any_delivery_order_gives_same_state():
 							type: 'list',
 							items: [
 								'**Option A:** persist the pending buffer in the same DB transaction as the views (a `pending_events` table).',
-								'**Option B:** only commit offsets up to the lowest offset still sitting in the buffer, so buffered events are redelivered after a restart.',
+								'**Option B:** only [[offset-commit|commit offsets]] up to the lowest offset still sitting in the buffer, so buffered events are redelivered after a restart.',
 								'**Option C:** store the consumer offsets in the same Postgres transaction as the view (and seek to them on startup): view and offset are then atomic, which is the honest version of "[[exactly-once]]".',
 								'**Gaps that never fill:** alert when an order has been waiting for the same version for > N minutes, then fetch the current state from the source-of-truth API to resync.'
 							]
@@ -1618,7 +1619,7 @@ def test_any_delivery_order_gives_same_state():
 					id: 't2',
 					title: 'Three retry layers',
 					tag: 'teaser',
-					prompt: [{ type: 'p', text: 'bff retries 2×, cart-svc retries 3×, the mesh retries 2× on every hop. A request to the bottom service always fails. How many calls hit it per user click?' }],
+					prompt: [{ type: 'p', text: 'bff retries 2×, cart-svc retries 3×, the [[service-mesh|mesh]] retries 2× on every hop. A request to the bottom service always fails. How many calls hit it per user click?' }],
 					answer: [{ type: 'p', text: '(1+2) × (1+3) × (1+2) = **36**. And the mesh also retries the bff → cart hop, so it\'s worse: (1+2)(1+2) × (1+3)(1+2) = 108 if the mesh is on both hops. Retry in one place.' }]
 				},
 				{
@@ -1639,7 +1640,7 @@ def test_any_delivery_order_gives_same_state():
 					id: 't5',
 					title: 'Timeouts that grow downwards',
 					tag: 'teaser',
-					prompt: [{ type: 'p', text: 'Gateway timeout 2 s. order-svc → pricing timeout 5 s. What\'s wrong?' }],
+					prompt: [{ type: 'p', text: 'Gateway [[timeout|timeout]] 2 s. order-svc → pricing timeout 5 s. What\'s wrong?' }],
 					answer: [{ type: 'p', text: 'Pricing can run for 3 s after the user already got an error: pure wasted work, plus side effects nobody is waiting for. Each hop\'s timeout must be shorter than its caller\'s remaining budget. Better: propagate the deadline ([[deadline-propagation]]).' }]
 				},
 				{

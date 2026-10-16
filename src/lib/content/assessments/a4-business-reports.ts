@@ -175,7 +175,7 @@ const assessment: Assessment = {
 							type: 'ranked',
 							items: [
 								{
-									title: 'Different [[day-boundary|day boundaries]]: our SQL groups by UTC date, the provider by Los Angeles date.',
+									title: 'Different [[day-boundary|day boundaries]]: our SQL groups by [[utc|UTC]] date, the provider by Los Angeles date.',
 									body: 'The daily differences alternate in sign and mostly cancel over the week. Money isn\'t missing, it\'s moving between neighbouring days. UTC midnight is 17:00 in LA, so Monday-evening US sales count as Tuesday on our side.',
 									confirm: 'Re-run the query grouped by `(created_at AT TIME ZONE \'America/Los_Angeles\')::date`. Daily rows should then match to within refunds.'
 								},
@@ -225,7 +225,7 @@ const assessment: Assessment = {
 						},
 						{
 							type: 'p',
-							text: 'The MRR report is a cron job at **00:15 UTC on the 1st** that sums `price` for `status = \'active\'` subscriptions. Monthly renewals are processed by a separate batch that starts at 00:05 and moves each subscription from `renewal_pending` back to `active`.'
+							text: 'The MRR report is a [[cron|cron]] job at **00:15 UTC on the 1st** that sums `price` for `status = \'active\'` subscriptions. Monthly renewals are processed by a separate batch that starts at 00:05 and moves each subscription from `renewal_pending` back to `active`.'
 						},
 						{
 							type: 'dashboard',
@@ -305,7 +305,7 @@ const assessment: Assessment = {
 								},
 								{
 									title: 'Payment provider slowness made the batch late.',
-									body: 'Red herring: provider p95 is flat at ~310 ms. The batch is late because it\'s bigger, not because it\'s slower per item.'
+									body: 'Red herring: provider [[percentiles|p95]] is flat at ~310 ms. The batch is late because it\'s bigger, not because it\'s slower per item.'
 								}
 							]
 						},
@@ -442,7 +442,7 @@ WHERE start_date > :period_start
 						{
 							type: 'code',
 							lang: 'sql',
-							caption: 'One overlap test replaces both branches: the employment interval overlaps the pay period.',
+							caption: 'One overlap test replaces both branches: the employment [[interval-overlap|interval overlaps]] the pay period.',
 							code: `WHERE start_date <= :period_end
   AND (end_date IS NULL OR end_date >= :period_start)`
 						},
@@ -517,7 +517,7 @@ await provider.charges.create({ amount: plan.priceMinor, currency: plan.currency
 						},
 						{
 							type: 'p',
-							text: '**Remediation:** re-issue every non-2-decimal invoice since August. Invoices are often legal documents, so finance must confirm whether a corrected copy or a credit note is needed.'
+							text: '**Remediation:** re-issue every non-2-decimal invoice since August. Invoices are often legal documents, so finance must confirm whether a corrected copy or a [[credit-note|credit note]] is needed.'
 						},
 						reply(
 							'Kenji',
@@ -649,7 +649,7 @@ return round(total / 100, 2)`
 									confirm: 'Sample 10 "unrecognized" disputes: are they long-standing customers with normal usage? Check when the descriptor config changed.'
 								},
 								{
-									title: 'Card-testing fraud.',
+									title: '[[card-testing|Card-testing]] fraud.',
 									body: 'Would show as many small authorisations, high decline rates, new accounts, and "fraudulent" reason codes. None of those moved.',
 									confirm: 'Decline rate and new-signup volume since Sep 14.'
 								}
@@ -721,7 +721,7 @@ return round(total / 100, 2)`
 						},
 						{
 							type: 'p',
-							text: 'Last week a CDN rule was added: `path /pricing → cache 300s` "to speed up the marketing launch". The origin chooses currency from the `CF-IPCountry`-style geo header.'
+							text: 'Last week a [[cdn]] rule was added: `path /pricing → cache 300s` "to speed up the marketing launch". The origin chooses currency from the `CF-IPCountry`-style geo header.'
 						}
 					],
 					answer: [
@@ -734,14 +734,14 @@ return round(total / 100, 2)`
 									confirm: '`curl -H "CF-IPCountry: US" …/pricing` right after a DE request on the same edge: you get EUR and `x-cache: HIT`.'
 								},
 								{
-									title: 'VPN / geo-IP inaccuracy (support\'s theory).',
+									title: 'VPN / [[geo-ip|geo-IP]] inaccuracy (support\'s theory).',
 									body: 'Would be consistent per user and wouldn\'t flip on refresh.'
 								}
 							]
 						},
 						{
 							type: 'p',
-							text: '**Mitigate now:** remove the cache rule (or set `Cache-Control: private` on `/pricing`). **Fix:** country in the URL (`/us/pricing`), or add country to the CDN cache key, or emit a [[vary-header]] the CDN honours. Prices are a trust issue, so also confirm checkout always charged the correct currency: did anyone *pay* in the wrong one?'
+							text: '**Mitigate now:** remove the cache rule (or set the [[cache-control]] header to `private` on `/pricing`). **Fix:** country in the URL (`/us/pricing`), or add country to the CDN cache key, or emit a [[vary-header]] the CDN honours. Prices are a trust issue, so also confirm checkout always charged the correct currency: did anyone *pay* in the wrong one?'
 						},
 						reply(
 							'the support team',
@@ -779,7 +779,7 @@ return round(total / 100, 2)`
 					answer: [
 						{
 							type: 'p',
-							text: '**Cause:** the CSV comes from a German-locale Excel, which writes numbers with a decimal comma and a dot as thousands separator ([[locale-formatting]]). `parseFloat` stops at the first character it doesn\'t understand: `parseFloat("12,99")` = `12`, and `parseFloat("1.299,00")` = `1.299` → 130 minor units = €1.30. No error, no warning. This is [[type-coercion]] failing silently.'
+							text: '**Cause:** the CSV comes from a German-locale Excel, which writes numbers with a decimal comma and a dot as thousands separator ([[locale-formatting]]). `parseFloat` stops at the first character it doesn\'t understand: `parseFloat("12,99")` = `12`, and `parseFloat("1.299,00")` = `1.299` → 130 [[minor-units|minor units]] = €1.30. No error, no warning. This is [[type-coercion]] failing silently.'
 						},
 						{
 							type: 'list',
@@ -826,7 +826,7 @@ age: 212`
 						{
 							type: 'code',
 							lang: 'diff',
-							caption: 'Merged Thursday 17:40 in shared middleware: "perf: enable CDN caching for HTML"',
+							caption: 'Merged Thursday 17:40 in shared middleware: "perf: enable [[cdn]] caching for HTML"',
 							code: `- res.setHeader('Cache-Control', 'private, no-store');
 + res.setHeader('Cache-Control', 'public, max-age=300');`
 						}
@@ -836,14 +836,14 @@ age: 212`
 							type: 'callout',
 							tone: 'crit',
 							title: 'This is the most severe report in the assessment',
-							text: 'A polite, low-key customer email describing a [[personal-data-breach]]. Name, address, possibly orders and payment details of one customer shown to another. Treat it as **SEV1** immediately. Don\'t wait to finish the investigation.'
+							text: 'A polite, low-key customer email describing a [[personal-data-breach]]. Name, address, possibly orders and payment details of one customer shown to another. Treat it as **[[severity-triage|SEV1]]** immediately. Don\'t wait to finish the investigation.'
 						},
 						{
 							type: 'ranked',
 							items: [
 								{
 									title: 'A shared CDN cached a personalised page.',
-									body: 'The middleware change made *every* HTML response `public, max-age=300`, including `/account`. The CDN stores the first user\'s page under the [[cdn-cache-key|key]] `/account` and serves it to everyone hitting that edge for 5 minutes. `x-cache: HIT` with `age: 212` proves the response came from cache.',
+									body: 'The middleware change made *every* HTML response\'s [[cache-control]] header `public, max-age=300`, including `/account`. The CDN stores the first user\'s page under the [[cdn-cache-key|key]] `/account` and serves it to everyone hitting that edge for 5 minutes. `x-cache: HIT` with `age: 212` proves the response came from cache.',
 									confirm: 'Two different logged-in sessions request `/account` within 5 minutes and get the same body.'
 								},
 								{
@@ -861,7 +861,7 @@ age: 212`
 							ordered: true,
 							items: [
 								'**Contain:** [[rollback|roll back]] the middleware change, then **purge the CDN cache** (the rollback alone doesn\'t evict pages already stored).',
-								'**Escalate:** security lead and the data protection officer / legal, now. The regulator notification clock (72 h under GDPR) starts from awareness.',
+								'**Escalate:** security lead and the data protection officer / legal, now. The regulator notification clock (72 h under [[gdpr]]) starts from awareness.',
 								'**Preserve evidence:** CDN logs from Thursday 17:40 to the purge. They show which cached copies were served to whom.',
 								'**Scope:** every path that returned personalised content with `public` caching. Count requests that were HITs on those paths, and which users\' pages were in cache.',
 								'**Prevent:** default to `private, no-store` for authenticated responses, and add a test that fails if any route with a session returns `public`.'
@@ -920,12 +920,12 @@ age: 212`
 							items: [
 								{
 									title: 'A backup restore brought deleted people back, and the nightly sync re-subscribed them.',
-									body: 'The restore used the Sep 20 snapshot and, because of a gap in the WAL archive, could only replay changes from Oct 1. Everything written Sep 20 → Oct 1 was lost, including the Sep 23 erasure. The 17 contacts *created* on Oct 3 are the smoking gun: they existed in the restored DB but not in the email platform, i.e. people erased in that window.',
+									body: 'The restore used the Sep 20 snapshot and, because of a gap in the [[write-ahead-log|WAL]] archive, could only replay changes from Oct 1. Everything written Sep 20 → Oct 1 was lost, including the Sep 23 erasure. The 17 contacts *created* on Oct 3 are the smoking gun: they existed in the restored DB but not in the email platform, i.e. people erased in that window.',
 									confirm: 'Compare the 17 created contacts against erasure requests completed between Sep 20 and Oct 2.'
 								},
 								{
 									title: 'The email platform keeps its own copy and erasure only deleted from our DB.',
-									body: 'The erasure log lists `users, orders.pii, crm`: **no `email-platform`**. If erasure never reached the email platform, every erased person who was a subscriber is still on the list, a much bigger set.',
+									body: 'The erasure log lists `users, orders.pii, crm` (the stores holding [[pii|personal data]]): **no `email-platform`**. If erasure never reached the email platform, every erased person who was a subscriber is still on the list, a much bigger set.',
 									confirm: 'Search the email platform for a sample of erased emails from any month.'
 								}
 							]
@@ -988,7 +988,7 @@ except CarrierError as e:
 							type: 'ranked',
 							items: [
 								{
-									title: 'The carrier API accepts only Latin-1 and max 35 characters; we send the raw Unicode name.',
+									title: 'The carrier API accepts only [[character-encoding|Latin-1]] and max 35 characters; we send the raw Unicode name.',
 									body: '"Foreign names" is really "names with characters outside the carrier\'s character set". Interesting detail: "José Martínez" *is* valid Latin-1, but it was rejected. That name was probably stored in decomposed form (`e` + combining accent) from a macOS form submission. See [[unicode-normalization]].',
 									confirm: 'Print `repr()` / code points of the rejected names; the José one will contain `U+0301`.'
 								},
@@ -1003,7 +1003,7 @@ except CarrierError as e:
 							items: [
 								'Normalize names to NFC on save.',
 								'For the carrier only: transliterate (`Ł→L`, `ø→o`) and truncate to 35 with a deterministic rule. Keep the original name in our DB and on the packing slip.',
-								'Treat 4xx as permanent: move the order to `label_failed`, show it on the warehouse screen with the reason, and alert on count > 0.',
+								'Treat [[http-status-codes|4xx]] as permanent: move the order to `label_failed`, show it on the warehouse screen with the reason, and alert on count > 0.',
 								'**Remediation:** re-run the 31 stuck orders through the new path today.'
 							]
 						},
@@ -1042,7 +1042,7 @@ app.example.com.   281     IN  A   198.51.100.24     ← new load balancer`
 						},
 						{
 							type: 'p',
-							text: 'At 06:00 today infra moved the site to a new load balancer and switched the old one off at 06:15. The old DNS record had a TTL of 86400 (24 h). Monitoring from three regions shows 100% uptime.'
+							text: 'At 06:00 today infra moved the site to a new [[load-balancer|load balancer]] and switched the old one off at 06:15. The old DNS record had a TTL of 86400 (24 h). Monitoring from three regions shows 100% uptime.'
 						}
 					],
 					answer: [
@@ -1145,8 +1145,8 @@ app.example.com.   281     IN  A   198.51.100.24     ← new load balancer`
 							type: 'ranked',
 							items: [
 								{
-									title: 'Transactional and marketing email share one FIFO-ish queue; resets wait behind 240k newsletters.',
-									body: 'At 10:00 queue depth jumps to 240k and the workers run at full capacity (~2,500/min, the flat ceiling), so they are not broken. The [[queue-age]] climbs linearly and crosses the 15-minute link TTL around 10:15. A reset requested at 10:30 sits behind ~165k campaign emails and arrives ~65 min later, long expired.',
+									title: '[[transactional-email|Transactional]] and marketing email share one [[fifo-queue|FIFO]]-ish queue; resets wait behind 240k newsletters.',
+									body: 'At 10:00 queue depth jumps to 240k and the workers run at full capacity (~2,500/min, the flat ceiling), so they are not broken. The [[queue-age]] climbs linearly and crosses the 15-minute link [[ttl|TTL]] around 10:15. A reset requested at 10:30 sits behind ~165k campaign emails and arrives ~65 min later, long expired.',
 									confirm: 'Sample reset emails: enqueue time vs provider "accepted" time.'
 								},
 								{
@@ -1161,7 +1161,7 @@ app.example.com.   281     IN  A   198.51.100.24     ← new load balancer`
 						},
 						{
 							type: 'p',
-							text: '**Now:** pause the campaign; resets drain immediately. **Fix:** separate queues (or priorities) for transactional vs bulk email with dedicated workers, rate-limit bulk sends, alert on age of oldest *transactional* message > 60 s. Optionally start the reset link\'s TTL when the email is sent, not when it\'s requested.'
+							text: '**Now:** pause the campaign; resets drain immediately. **Fix:** separate queues (or priorities) for transactional vs bulk email with dedicated workers, [[rate-limiting|rate-limit]] bulk sends, alert on age of oldest *transactional* message > 60 s. Optionally start the reset link\'s TTL when the email is sent, not when it\'s requested.'
 						},
 						reply(
 							'support',
@@ -1232,7 +1232,7 @@ app.example.com.   281     IN  A   198.51.100.24     ← new load balancer`
 						},
 						{
 							type: 'p',
-							text: '**Fix:** run scheduled jobs from one place (an external scheduler, or a DB lock / leader election so only one instance runs it), record each send as `(campaign_id, recipient_id)` with a unique constraint so a second run is a no-op, and pass an [[idempotency-key]] per batch to the email provider.'
+							text: '**Fix:** run scheduled jobs from one place (an external scheduler, or a [[distributed-lock|DB lock]] / [[leader-election|leader election]] so only one instance runs it), record each send as `(campaign_id, recipient_id)` with a unique constraint so a second run is a no-op, and pass an [[idempotency-key]] per batch to the email provider.'
 						},
 						reply(
 							'Sofia',
@@ -1308,7 +1308,7 @@ app.example.com.   281     IN  A   198.51.100.24     ← new load balancer`
 					answer: [
 						{
 							type: 'p',
-							text: '**Testable claim:** "Demo latency is high 12:00–19:00 UTC on weekdays (14:00–21:00 Berlin)." Lena\'s theory (too many sales people) is checkable against the request-rate panel.'
+							text: '**Testable claim:** "Demo latency is high 12:00–19:00 [[utc|UTC]] on weekdays (14:00–21:00 Berlin)." Lena\'s theory (too many sales people) is checkable against the request-rate panel.'
 						},
 						{
 							type: 'ranked',
@@ -1316,7 +1316,7 @@ app.example.com.   281     IN  A   198.51.100.24     ← new load balancer`
 								{
 									title: 'Demo shares its database with staging, and the US QA team\'s end-to-end suite hammers it in their morning.',
 									body: 'DB CPU goes from ~17% to ~88% at 12:00 UTC, which is 08:00 in New York. `staging-e2e` connections jump from 0 to 140 at the same time. Demo latency tracks DB CPU exactly. Lena\'s afternoon is QA\'s morning.',
-									confirm: 'QA test schedule; `pg_stat_activity` grouped by `application_name` at 13:00 UTC.'
+									confirm: 'QA test schedule; [[pg-stat-activity|pg_stat_activity]] grouped by `application_name` at 13:00 UTC.'
 								},
 								{
 									title: 'Too many sales users (Lena\'s theory).',
@@ -1370,7 +1370,7 @@ app.example.com.   281     IN  A   198.51.100.24     ← new load balancer`
 					answer: [
 						{
 							type: 'p',
-							text: '**Cause:** check-then-act [[race-condition]] → [[oversell]]. Two requests both read `1`, both pass the check, both write `0`, and both create an order. The "write the value I computed" form also loses updates, so stock can go negative once a later restock or adjustment subtracts from a wrong base. It only shows under flash-sale concurrency.'
+							text: '**Cause:** check-then-act [[race-condition]] → [[oversell]]. Two requests both read `1`, both pass the check, both write `0`, and both create an order. The "write the value I computed" form also [[lost-update|loses updates]], so stock can go negative once a later restock or adjustment subtracts from a wrong base. It only shows under flash-sale concurrency.'
 						},
 						{
 							type: 'code',
@@ -1419,7 +1419,7 @@ RETURNING qty_available;`
 						},
 						{
 							type: 'p',
-							text: 'The split is configured as 50/50. Variant B\'s confirmation page fires the analytics event in `onMount`, and B redirects through `/checkout/v2` before assignment is logged.'
+							text: 'The [[ab-test|A/B test]] split is configured as 50/50. Variant B\'s confirmation page fires the analytics event in `onMount`, and B redirects through `/checkout/v2` before assignment is logged.'
 						}
 					],
 					answer: [
@@ -1434,7 +1434,7 @@ RETURNING qty_available;`
 								{
 									title: '[[sample-ratio-mismatch]]: 50,120 vs 44,870 on a 50/50 split.',
 									body: 'That gap (~5%) is far outside random chance for these sizes. Some B users are lost before assignment is logged, probably bouncing during the extra redirect. The experiment is invalid regardless of the metric.',
-									confirm: 'Chi-square test on the counts; check B users who hit `/checkout/v2` without an assignment log.'
+									confirm: '[[statistical-significance|Chi-square test]] on the counts; check B users who hit `/checkout/v2` without an assignment log.'
 								}
 							]
 						},
@@ -1496,7 +1496,7 @@ RETURNING qty_available;`
 						},
 						{
 							type: 'p',
-							text: '**Fix:** publish events explicitly after the bulk insert (one batch event with all SKUs), or move the "notify indexer" responsibility out of model hooks into an outbox the DB write itself populates. Add a check: products older than 10 min with `indexed_at IS NULL` → alert.'
+							text: '**Fix:** publish events explicitly after the bulk insert (one batch event with all SKUs), or move the "notify indexer" responsibility out of model hooks into an [[transactional-outbox|outbox]] the DB write itself populates. Add a check: products older than 10 min with `indexed_at IS NULL` → alert.'
 						},
 						reply(
 							'Hannah',
@@ -1540,7 +1540,7 @@ RETURNING qty_available;`
 					tag: 'core',
 					minutes: 4,
 					prompt: [
-						{ type: 'p', text: 'All arrive on Monday morning. Assign SEV1–4 and say which you\'d pick up first.' },
+						{ type: 'p', text: 'All arrive on Monday morning. Assign [[severity-triage|SEV1–4]] and say which you\'d pick up first.' },
 						{
 							type: 'list',
 							ordered: true,
@@ -1593,7 +1593,7 @@ RETURNING qty_available;`
 					answer: [
 						{
 							type: 'p',
-							text: 'Problems: jargon (UTC, PSP, aggregates, tz param), blame ("you should\'ve"), "obviously", no reassurance about the actual worry (is money missing?), and no commitment ("at some point").'
+							text: 'Problems: jargon (UTC, [[psp|PSP]], aggregates, tz param), blame ("you should\'ve"), "obviously", no reassurance about the actual worry (is money missing?), and no commitment ("at some point").'
 						},
 						reply(
 							'Finance',
@@ -1639,7 +1639,7 @@ I'll update you by [time] either way.`
 					tag: 'template',
 					minutes: 4,
 					prompt: [
-						{ type: 'p', text: 'For the "saw someone else\'s address" incident: write the first message to the security lead and the data protection officer.' }
+						{ type: 'p', text: 'For the "saw someone else\'s address" incident (a [[severity-triage|SEV1]]): write the first message to the security lead and the data protection officer.' }
 					],
 					answerLabel: 'Show template',
 					answer: [
@@ -1752,7 +1752,7 @@ Next update: 09:15.`
 					title: '"Charged twice": what do you ask for?',
 					tag: 'teaser',
 					prompt: [{ type: 'p', text: 'One message back to the customer. Which two things?' }],
-					answer: [{ type: 'p', text: 'The order number (or account email) and the two charge dates/amounts from their statement. Often one is a pending authorisation that will drop off, not a second charge, and only the statement shows that.' }]
+					answer: [{ type: 'p', text: 'The order number (or account email) and the two charge dates/amounts from their statement. Often one is a pending [[auth-and-capture|authorisation]] that will drop off, not a second charge, and only the statement shows that.' }]
 				},
 				{
 					id: 't6',
@@ -1791,7 +1791,7 @@ Next update: 09:15.`
 							items: [
 								'Deploys and config/feature-flag changes (ours) in the window.',
 								'Infra or vendor changes (DNS, CDN rules, provider status/incidents).',
-								'The calendar: month end, DST change, a holiday, a big campaign, a scheduled job that only runs weekly or monthly.'
+								'The calendar: month end, [[dst|DST]] change, a holiday, a big campaign, a scheduled job that only runs weekly or monthly.'
 							]
 						}
 					]

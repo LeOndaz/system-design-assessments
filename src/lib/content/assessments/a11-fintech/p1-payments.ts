@@ -14,10 +14,10 @@ export const payments: Part = {
 		{
 			type: 'flow',
 			steps: [
-				{ label: 'Checkout', note: 'payment intent created' },
+				{ label: 'Checkout', note: '[[payment-intent|payment intent]] created' },
 				{ label: 'Orchestrator', note: 'idempotency key, routing' },
 				{ label: 'PSP', note: 'acquirer gateway' },
-				{ label: 'Card network', note: 'routes to issuer' },
+				{ label: 'Card network', note: 'routes to [[issuer-acquirer|issuer]]' },
 				{ label: 'Issuer', note: 'approves, places hold' },
 				{ label: 'Capture → settlement', note: 'T+1…T+3, netted payout', tone: 'info' }
 			],
@@ -82,7 +82,7 @@ Are we charging people twice or is this the bank's problem? Can I tell them the 
 					items: [
 						{
 							title: 'A timeout was translated into a decline.',
-							body: 'att_1 timed out at 8 s; the orchestrator told the customer "declined". PSP-A approved it anyway and said so at 09:14:21, and the webhook handler ignored the news because the attempt was already "final". A timeout is an unknown outcome, never a decline.',
+							body: 'att_1 timed out at 8 s; the orchestrator told the customer "declined". PSP-A approved it anyway and said so at 09:14:21, and the [[webhook|webhook]] handler ignored the news because the attempt was already "final". A timeout is an unknown outcome, never a decline.',
 							confirm: 'For every attempt marked failed after a timeout today, query PSP-A by attempt id. Count how many are actually `authorized`.'
 						},
 						{
@@ -123,7 +123,7 @@ Suggested reply: "You haven't been charged twice. The second amount is a tempora
 			prompt: [
 				{
 					type: 'p',
-					text: 'Since adding iDEAL and SEPA Direct Debit plus 3DS2, about 0.8% of payments marked **failed** later show up as money received in the PSP settlement report. Customers were charged; no order exists; the inventory was released. Webhook delivery success is 99.97%.'
+					text: 'Since adding iDEAL and [[sepa-direct-debit]] plus 3DS2, about 0.8% of payments marked **failed** later show up as money received in the PSP [[settlement|settlement report]]. Customers were charged; no order exists; the inventory was released. Webhook delivery success is 99.97%.'
 				},
 				{
 					type: 'code',
@@ -201,7 +201,7 @@ def on_webhook(evt):
 				},
 				{
 					type: 'p',
-					text: '**Fix:** do not depend on the browser session for the return leg. Put the payment intent id in the return URL (or POST body), verify its signature/state server-side, look up the intent, and resume. Keep `SameSite=Strict` for the session if you want it; add a separate short-lived, single-purpose cookie only if the flow truly needs one. The duplicate orders come from the same idempotency mistake as the previous question: the retry must resume the existing intent.'
+					text: '**Fix:** do not depend on the browser session for the return leg. Put the payment intent id in the return URL (or POST body), verify its signature/state server-side, look up the intent, and resume. Keep `SameSite=Strict` ([[samesite-cookie|SameSite]]) for the session if you want it; add a separate short-lived, single-purpose cookie only if the flow truly needs one. The duplicate orders come from the same idempotency mistake as the previous question: the retry must resume the existing intent.'
 				}
 			]
 		},
@@ -213,7 +213,7 @@ def on_webhook(evt):
 			prompt: [
 				{
 					type: 'p',
-					text: 'Order of three items, **$300.00** authorized on **Oct 1**. Items ship separately and you capture per shipment:'
+					text: 'Order of three items, **$300.00** [[auth-and-capture|authorized]] on **Oct 1**. Items ship separately and you capture per shipment:'
 				},
 				{
 					type: 'table',
@@ -244,7 +244,7 @@ def on_webhook(evt):
 				},
 				{
 					type: 'p',
-					text: '**Fix:** enable multicapture and mark non-final captures as such; for items shipping after the validity window, either re-authorize (as a merchant-initiated transaction on stored credentials) or authorize per shipment. Release what you will never capture with an [[auth-reversal]] so the customer\'s funds are not frozen. Model it in the order: an authorization has an expiry timestamp, and the fulfilment planner must see it.'
+					text: '**Fix:** enable multicapture and mark non-final captures as such; for items shipping after the validity window, either re-authorize (as a [[merchant-initiated-transaction|merchant-initiated transaction]] on stored credentials) or authorize per shipment. Release what you will never capture with an [[auth-reversal]] so the customer\'s funds are not frozen. Model it in the order: an authorization has an expiry timestamp, and the fulfilment planner must see it.'
 				}
 			]
 		},
@@ -280,7 +280,7 @@ def on_webhook(evt):
 					type: 'ranked',
 					items: [
 						{
-							title: 'Check-then-insert race.',
+							title: 'Check-then-insert [[race-condition|race]].',
 							body: 'The sync response and the webhook often arrive within milliseconds; both run `exists`, both see nothing, both post. That explains duplicates in general, not their clustering around failovers.'
 						},
 						{
@@ -292,7 +292,7 @@ def on_webhook(evt):
 				},
 				{
 					type: 'p',
-					text: '**Fix:** ledger idempotency on *our* identifiers: a unique constraint on `(payment_intent_id, entry_type, sequence)` and `INSERT … ON CONFLICT DO NOTHING` inside the same transaction as the entries (no check-then-act). In the orchestrator, never re-drive a timed-out attempt on another PSP until the first PSP has answered "not captured" (see the lab in Part 5). **Remediation:** the second capture at each pair is real money taken twice: refund it, then post the refund to the ledger, rather than deleting the "duplicate" entries, which would hide a customer overcharge.'
+					text: '**Fix:** ledger idempotency on *our* identifiers: a unique constraint on `(payment_intent_id, entry_type, sequence)` and `INSERT … ON CONFLICT DO NOTHING` (an [[upsert|upsert]]) inside the same transaction as the entries (no check-then-act). In the orchestrator, never re-drive a timed-out attempt on another PSP until the first PSP has answered "not captured" (see the lab in Part 5). **Remediation:** the second capture at each pair is real money taken twice: refund it, then post the refund to the ledger, rather than deleting the "duplicate" entries, which would hide a customer overcharge.'
 				}
 			]
 		},
@@ -374,7 +374,7 @@ def on_webhook(evt):
 					type: 'ranked',
 					items: [
 						{
-							title: 'Issuer C reads the rapid retries as card testing.',
+							title: 'Issuer C reads the rapid retries as [[card-testing|card testing]].',
 							body: 'Attempts per order jump from 1.03 to 1.31 exactly at the marker. Issuer C\'s `do_not_honor` doubles immediately (retries of soft declines decline again), and then `suspected_fraud` climbs from ~0.4% to ~9% over the next 90 minutes as its risk models learn the pattern: identical amount, same card, three attempts in three seconds. Now *first* attempts from good customers are declined too. Approval falls 91% → 74%.',
 							confirm: 'Approval rate of **first** attempts only at Issuer C, before vs after 10:00. If first attempts fell, the retries poisoned the merchant\'s reputation at that issuer, not just their own outcome.'
 						},
@@ -386,7 +386,7 @@ def on_webhook(evt):
 				},
 				{
 					type: 'p',
-					text: '**Mitigate:** turn smart retries off now; Issuer C\'s risk scoring will take hours to days to recover. **Fix properly:** retry only codes the [[card-network|scheme rules]] allow, with spacing (hours, not seconds) and caps per card per period; never retry hard declines; measure approval per order and per first attempt; roll out per issuer with a holdout. The deeper lesson: issuers, not your code, decide whether a retry is "smart".'
+					text: '**Mitigate:** turn smart retries off now; Issuer C\'s risk scoring will take hours to days to recover. **Fix properly:** retry only codes the [[card-network|scheme rules]] allow, with spacing (hours, not seconds) and caps per card per period; never retry hard declines; measure approval per order and per first attempt; roll out per issuer with a [[holdout-group|holdout]]. The deeper lesson: issuers, not your code, decide whether a retry is "smart".'
 				}
 			]
 		},
@@ -435,7 +435,7 @@ Are the banks just siding with customers now? Should we stop fighting disputes u
 			answer: [
 				{
 					type: 'p',
-					text: 'The obvious story, "banks side with customers", is contradicted by the table: 268 of 299 losses say **no response**. The evidence is uploaded but never submitted. Many PSP dispute APIs stage evidence on `update` and only send it to the issuer when you submit (a `submit: true` flag or a separate submit call); the manual process clicked "Submit" in the dashboard. Our code marks the dispute "responded", so nobody looks again until the deadline passes and [[representment]] is lost automatically.'
+					text: 'The obvious story, "banks side with customers", is contradicted by the table: 268 of 299 lost [[chargeback|chargebacks]] say **no response**. The evidence is uploaded but never submitted. Many PSP dispute APIs stage evidence on `update` and only send it to the issuer when you submit (a `submit: true` flag or a separate submit call); the manual process clicked "Submit" in the dashboard. Our code marks the dispute "responded", so nobody looks again until the deadline passes and [[representment]] is lost automatically.'
 				},
 				{
 					type: 'p',

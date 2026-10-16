@@ -238,7 +238,7 @@ export function schedule(principal: bigint, annualBps: bigint, months: number): 
 			title: 'Write the tests',
 			tag: 'coding',
 			answerLabel: 'Show tests',
-			prompt: [{ type: 'p', text: 'List the edge cases and the invariants before you look.' }],
+			prompt: [{ type: 'p', text: 'List the edge cases and the [[ledger-invariant|invariants]] before you look.' }],
 			answer: [
 				{
 					type: 'code',

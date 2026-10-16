@@ -28,7 +28,7 @@ export const risk: Part = {
 			prompt: [
 				{
 					type: 'p',
-					text: 'Fraud model v7 (AUC up from 0.91 to 0.94 offline) shipped at 13:20. The authorization path calls the fraud service with a 150 ms budget. ~40 authorizations/s.'
+					text: 'Fraud model v7 ([[auc|AUC]] up from 0.91 to 0.94 offline) shipped at 13:20. The authorization path calls the fraud service with a 150 ms budget. ~40 authorizations/s.'
 				},
 				{
 					type: 'dashboard',
@@ -115,7 +115,7 @@ export const risk: Part = {
 			prompt: [
 				{
 					type: 'p',
-					text: 'Rule: max **5 authorization attempts per card number per 10 minutes**. It is enforced with fixed 10-minute windows (`floor(now / 600)`) in Redis, separately in each of 3 regions (EU, US, APAC), because a global counter added ~80 ms. During a [[card-testing]] attack, one card saw 30 attempts in under 2 minutes, all within policy according to the logs.'
+					text: 'Rule: max **5 authorization attempts per card number per 10 minutes**. It is enforced with [[rate-limiting|fixed 10-minute windows]] (`floor(now / 600)`) in Redis, separately in each of 3 regions (EU, US, APAC), because a global counter added ~80 ms. During a [[card-testing|card testing]] attack, one card saw 30 attempts in under 2 minutes, all within policy according to the logs.'
 				},
 				{ type: 'list', items: ['How did 30 attempts pass?', 'What is the worst case per 10 minutes as configured?', 'Fix it without adding 80 ms to every authorization.'] }
 			],
@@ -189,11 +189,11 @@ Engineering proposed raising the match threshold from 85 to 92 to "get back to n
 			answer: [
 				{
 					type: 'p',
-					text: 'First the [[base-rate-fallacy|base rate]]: ~40,000 payouts a day screened. 200 alerts/day ≈ 0.5% flagged; 1,200 ≈ 3%. With about 2 true hits a *year*, essentially **every alert is a false positive** before and after: precision was already ~0.003% and is now ~0.0005%. Capacity: 6 analysts clear 1,050/day against 1,200 arriving → backlog grows ~150/day, as the chart shows.'
+					text: 'First the [[base-rate-fallacy|base rate]]: ~40,000 payouts a day go through [[sanctions-screening|sanctions screening]]. 200 alerts/day ≈ 0.5% flagged; 1,200 ≈ 3%. With about 2 true hits a *year*, essentially **every alert is a false positive** before and after: precision was already ~0.003% and is now ~0.0005%. Capacity: 6 analysts clear 1,050/day against 1,200 arriving → backlog grows ~150/day, as the chart shows.'
 				},
 				{
 					type: 'p',
-					text: '**Why not just raise the threshold:** transliteration rules exist because sanctioned names arrive spelled differently (Mohammed / Muhammad / Mokhammed). A threshold tuned on the old matcher interacts unpredictably with the new one, and the cost of one missed true hit (a sanctions breach) is not comparable to analyst hours. The question to answer is not "how many alerts" but "what is our recall on known-hit test names at 92?"; nobody has measured that.'
+					text: '**Why not just raise the threshold:** transliteration rules exist because sanctioned names arrive spelled differently (Mohammed / Muhammad / Mokhammed). A threshold tuned on the old matcher interacts unpredictably with the new one, and the cost of one missed true hit (a sanctions breach) is not comparable to analyst hours. The question to answer is not "how many alerts" but "what is our [[recall-precision|recall]] on known-hit test names at 92?"; nobody has measured that.'
 				},
 				{
 					type: 'ranked',
@@ -218,7 +218,7 @@ Engineering proposed raising the match threshold from 85 to 92 to "get back to n
 			prompt: [
 				{
 					type: 'p',
-					text: 'Compliance found 37 users that manual review had **rejected** for forged documents who are now `verified` and withdrew funds. The [[kyc]] vendor auto-approves first, then a human may overturn the decision. Webhooks are retried with backoff for up to 72 hours.'
+					text: 'Compliance found 37 users that manual review had **rejected** for forged documents who are now `verified` and withdrew funds. The [[kyc]] vendor auto-approves first, then a human may overturn the decision. [[webhook|Webhooks]] are retried with backoff for up to 72 hours.'
 				},
 				{
 					type: 'code',
@@ -287,7 +287,7 @@ export async function onVendorEvent(e: VendorEvent) {
 				},
 				{
 					type: 'p',
-					text: 'Treat it as security until proven otherwise (preserve the table, verify content hashes, check DB audit logs), then fix: a single serialized writer per chain (an advisory lock around read-prev + insert, or a single appender service), or one chain per partition with a Merkle root over partitions per minute; periodically anchor the latest root somewhere you do not control (a timestamping service or a different account\'s WORM storage). Verification should walk by `prev_hash` links and report forks distinctly from content mismatches.'
+					text: 'Treat it as security until proven otherwise (preserve the table, verify content hashes, check DB audit logs), then fix: a single serialized writer per chain (an [[advisory-lock|advisory lock]] around read-prev + insert, or a single appender service), or one chain per partition with a Merkle root over partitions per minute; periodically anchor the latest root somewhere you do not control (a timestamping service or a different account\'s WORM storage). Verification should walk by `prev_hash` links and report forks distinctly from content mismatches.'
 				}
 			]
 		},
@@ -337,7 +337,7 @@ export async function onVendorEvent(e: VendorEvent) {
 					items: [
 						{ title: 'Contain:', body: 'stop body logging now; delete affected log data from the platform, its indexes, archives and backups, and ask the log vendor to purge.' },
 						{ title: 'Close the path:', body: 'force-upgrade old app versions to the SDK that tokenizes on device; keep the route returning an error that never echoes or logs the body; then remove it.' },
-						{ title: 'Detect:', body: 'a PAN detector (digit runs passing the Luhn check) in the log pipeline that redacts and alerts, because the next leak will come from a path you also believe is dead.' },
+						{ title: 'Detect:', body: 'a [[pan|PAN]] detector (digit runs passing the Luhn check) in the log pipeline that redacts and alerts, because the next leak will come from a path you also believe is dead.' },
 						{ title: 'Report:', body: 'this is a reportable finding for the PCI assessment; the scope reduction claim was wrong and the remediation evidence is what the auditor needs.' }
 					]
 				}

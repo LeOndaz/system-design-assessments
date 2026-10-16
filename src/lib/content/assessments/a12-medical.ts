@@ -165,7 +165,7 @@ It seems to happen when the technologist fixes something after the scan, like a 
 						},
 						{
 							type: 'p',
-							text: '**Fix:** derive every UID deterministically with a keyed hash: `2.25.` + decimal(HMAC(key, original UID)) ([[dicom-uid]]). It is stable across workers, restarts and re-sends, and not reversible without the key. Then make the archive ingest an **upsert by SOPInstanceUID**, so re-sent instances replace older versions. Turn off the vendor\'s heuristic "repair" grouping: it hid the bug.'
+							text: '**Fix:** derive every UID deterministically with a [[hmac|keyed hash]]: `2.25.` + decimal(HMAC(key, original UID)) ([[dicom-uid]]). It is stable across workers, restarts and re-sends, and not reversible without the key. Then make the archive ingest an **upsert by SOPInstanceUID**, so re-sent instances replace older versions. Turn off the vendor\'s heuristic "repair" grouping: it hid the bug.'
 						},
 						{
 							type: 'p',
@@ -174,7 +174,7 @@ It seems to happen when the technologist fixes something after the scan, like a 
 						{
 							type: 'callout',
 							tone: 'warn',
-							text: 'The tempting answer, "the archive should deduplicate by PatientID + date", is wrong: patients do get two different CTs on the same day (a trauma scan, then a follow-up after surgery). Identity in DICOM is the UID; protect it instead of guessing around it.'
+							text: 'The tempting answer, "the archive should deduplicate by PatientID + date", is wrong: patients do get two different CTs on the same day (a trauma scan, then a follow-up after surgery). Identity in [[dicom|DICOM]] is the UID; protect it instead of guessing around it.'
 						}
 					]
 				},
@@ -222,7 +222,7 @@ I need to know how this happened, how many images are affected, and whether othe
 								{
 									title: 'Scope the incident by modality and source, not by "export".',
 									body: 'Every export since this pipeline started has the same exposure for US/SC/OT/DOC. That is ~71,500 instances in RX-2026-14 alone. Head MR/CT is a separate, lower-likelihood exposure (it needs effort to reconstruct a face).',
-									confirm: 'Run OCR over the US/SC/OT/DOC instances of every past export and count text detections; sample 200 detections by hand to estimate how many contain names or DOB vs measurement labels ("Lt kidney 9.8 cm").'
+									confirm: 'Run [[ocr|OCR]] over the US/SC/OT/DOC instances of every past export and count text detections; sample 200 detections by hand to estimate how many contain names or DOB vs measurement labels ("Lt kidney 9.8 cm").'
 								},
 								{
 									title: 'Contain: revoke and recall.',
@@ -230,7 +230,7 @@ I need to know how this happened, how many images are affected, and whether othe
 								},
 								{
 									title: 'Fix the pipeline in layers.',
-									body: '(1) **Exclude by default** SC/OT/DOC unless a project explicitly needs them; (2) OCR plus masking for US with **human review** of detections; (3) defacing (removing or blurring the face in the volume) for head MR/CT; (4) validator rules that check pixels (OCR detection count must be 0 after masking) and free-text tags (`StudyDescription`, `ImageComments`, private groups).'
+									body: '(1) **Exclude by default** SC/OT/DOC unless a project explicitly needs them; (2) OCR plus masking for US with **human review** of detections; (3) [[defacing|defacing]] (removing or blurring the face in the volume) for head MR/CT; (4) validator rules that check pixels (OCR detection count must be 0 after masking) and free-text tags (`StudyDescription`, `ImageComments`, private groups).'
 								}
 							]
 						},
@@ -264,7 +264,7 @@ scanned and masked, with a person checking every image the scanner flags.`,
 					prompt: [
 						{
 							type: 'p',
-							text: 'The AI team deployed a DICOM gateway on Kubernetes (`AE: AIGW`, Service type `LoadBalancer`, port 11112). It queries the hospital PACS for prior studies, then retrieves them. Queries work. Retrieves do not.'
+							text: 'The AI team deployed a DICOM gateway on Kubernetes (`AE: AIGW`, Service type `LoadBalancer`, port 11112). It queries the hospital [[pacs]] for prior studies, then retrieves them. Queries work. Retrieves do not.'
 						},
 						{
 							type: 'logs',
@@ -289,7 +289,7 @@ scanned and masked, with a person checking every image the scanner flags.`,
 					answer: [
 						{
 							type: 'p',
-							text: '**C-MOVE is a callback.** The gateway asks the PACS to *push* the images to the destination AE named `AIGW` ([[dicomweb]]). The PACS looks up `AIGW` in **its own** AE table and opens a **new** association to that host and port. The first error (`0xA801`) means the PACS had never heard of `AIGW`. After the admin added it, the PACS tried to connect to `10.40.9.250:11112`, and nothing arrived: "no inbound associations".'
+							text: '**[[dimse|C-MOVE]] is a callback.** The gateway asks the PACS to *push* the images to the destination AE named `AIGW` ([[dicomweb]]). The PACS looks up `AIGW` in **its own** AE table and opens a **new** association to that host and port. The first error (`0xA801`) means the PACS had never heard of `AIGW`. After the admin added it, the PACS tried to connect to `10.40.9.250:11112`, and nothing arrived: "no inbound associations".'
 						},
 						{
 							type: 'ranked',
@@ -344,7 +344,7 @@ scanned and masked, with a person checking every image the scanner flags.`,
 					answer: [
 						{
 							type: 'p',
-							text: '**Lossy re-compression during migration.** From batch 3 the ingest stored images with transfer syntax `.4.91` (JPEG 2000, lossy permitted), a 7× size win over lossless. Lossy compression smooths exactly the tiny, high-frequency details mammography depends on. It is not a viewer issue: the pixel data itself changed. See [[transfer-syntax]].'
+							text: '**Lossy re-compression during migration.** From batch 3 the ingest stored images with transfer syntax `.4.91` (JPEG 2000, lossy permitted), a 7× size win over lossless. Lossy compression smooths exactly the tiny, high-frequency details mammography depends on, such as [[microcalcifications|microcalcifications]]. It is not a viewer issue: the pixel data itself changed. See [[transfer-syntax]].'
 						},
 						{
 							type: 'list',
@@ -390,19 +390,19 @@ scanned and masked, with a person checking every image the scanner flags.`,
 								]
 							}
 						},
-						{ type: 'p', text: 'The client is the modality vendor\'s STOW uploader, one HTTP request per study. The ingress controller has `proxy-body-size: 1g`.' }
+						{ type: 'p', text: 'The client is the modality vendor\'s [[dicomweb|STOW]] uploader, one HTTP request per study. The ingress controller has `proxy-body-size: 1g`.' }
 					],
 					answer: [
 						{
 							type: 'p',
-							text: '**Body size limit, not a timeout.** Every failure is a breast tomosynthesis (DBT) study above 1 GB, sent as a **single** STOW request, and the ingress rejects it with 413 after the client has spent ~60 s uploading (hence "fails at 99%"). The 612 MB CT with 1,204 instances passes. Instance count isn\'t the issue; bytes per request is. A DBT instance is one enormous multi-frame object.'
+							text: '**Body size limit, not a timeout.** Every failure is a breast [[digital-breast-tomosynthesis|tomosynthesis]] (DBT) study above 1 GB, sent as a **single** STOW request, and the ingress rejects it with 413 after the client has spent ~60 s uploading (hence "fails at 99%"). The 612 MB CT with 1,204 instances passes. Instance count isn\'t the issue; bytes per request is. A DBT instance is one enormous multi-frame object.'
 						},
 						{
 							type: 'list',
 							items: [
-								'**Red herring:** the p99 duration spikes look like a slow backend. They are the uploads themselves; the rejection happens at the end because the proxy counts bytes as they stream in.',
+								'**Red herring:** the [[percentiles|p99]] duration spikes look like a slow backend. They are the uploads themselves; the rejection happens at the end because the proxy counts bytes as they stream in.',
 								'**Wrong fix:** raise `proxy-body-size` to 10g. The next limits are proxy request buffering (nginx writes the body to disk or memory before forwarding), the app parsing multipart into memory (OOM), and the load balancer\'s idle timeout. You would move the failure, not remove it.',
-								'**Right fix:** turn off request buffering for this path and stream the multipart body straight to object storage, parsing parts as they arrive. Accept large objects by **streaming upload with resumability** (or one instance per request), and return per-instance results (STOW returns a response listing failed SOP instances, so partial success is normal and must be retried, not treated as all-or-nothing).',
+								'**Right fix:** turn off request buffering for this path and stream the multipart body straight to object storage, parsing parts as they arrive. Accept large objects by **streaming upload with resumability** (or one instance per request), and return per-instance results (STOW returns a response listing failed [[dicom-uid|SOP instance]]s, so partial success is normal and must be retried, not treated as all-or-nothing).',
 								'**Follow-up:** alert on 413 from ingest. A modality that silently drops a DBT study is a missing prior for the next screening read.'
 							]
 						}
@@ -499,14 +499,14 @@ scanned and masked, with a person checking every image the scanner flags.`,
 					answer: [
 						{
 							type: 'p',
-							text: '**Per-type queues destroyed per-patient order.** The EHR sent A01 (control ID 771198) *before* A08 (771203), but they went into different queues on different threads, so the update arrived first and was rejected. The retry lane then created a worse bug: the allergy update (771203) was re-applied at 14:07, **after** the later message that removed the allergy as entered-in-error (771260, applied 14:05:40). Pharmacy now shows an allergy that was retracted. See [[hl7-v2]] and [[out-of-order-delivery]].'
+							text: '**Per-type queues destroyed per-patient order.** The EHR sent [[adt-message|A01]] (control ID 771198) *before* A08 (771203), but they went into different queues on different threads, so the update arrived first and was rejected. The retry lane then created a worse bug: the allergy update (771203) was re-applied at 14:07, **after** the later message that removed the allergy as entered-in-error (771260, applied 14:05:40). Pharmacy now shows an allergy that was retracted. See [[hl7-v2]] and [[out-of-order-delivery]].'
 						},
 						{
 							type: 'list',
 							items: [
-								'**Confirm:** for a sample of patients, compare the sequence of control IDs (MSH-10) sent by the EHR with the order of ACKs at the pharmacy. Every inversion is a candidate data error.',
+								'**Confirm:** for a sample of patients, compare the sequence of control IDs (MSH-10) sent by the EHR with the order of [[hl7-acknowledgements|ACK]]s at the pharmacy. Every inversion is a candidate data error.',
 								'**Mitigate:** switch the channel back to a single ordered queue (slower but correct), and run a reconciliation of the pharmacy patient list and allergy lists against the EHR for every patient touched since the change.',
-								'**Fix:** partition by patient key (`PID-3` with issuer), with parallelism *across* partitions. Retries must block their own partition until resolved, never go to a side lane that reorders. Handle A40 merges by quiescing both patients\' partitions.',
+								'**Fix:** [[partition-key|partition by patient]] key (`PID-3` with issuer), with parallelism *across* partitions. Retries must block their own partition until resolved, never go to a side lane that reorders. Handle A40 merges by quiescing both patients\' partitions.',
 								'**Why "AE then retry later" is unsafe:** HL7 receivers usually apply messages as state changes, not as versioned facts. An old message replayed late overwrites newer state. That is a lost update that looks like a successful delivery.'
 							]
 						}
@@ -577,7 +577,7 @@ scanned and masked, with a person checking every image the scanner flags.`,
 							items: [
 								'**Red herring:** the drop in Site C\'s mean looks like a sicker population or a broken analyser. A ~18× step in a mean on a single day is a units change; biology doesn\'t do that.',
 								'**Mitigate:** suppress glucose alerts for Site C and route its results to manual verification. Notify the site lab: clinicians may have acted on false lows (dextrose given to normoglycaemic patients is a safety event to review).',
-								'**Fix:** map by (site, local code, **unit string**), not by local code alone. Validate OBX-6 against the units allowed for each LOINC (UCUM), and **reject** mismatches rather than convert silently. Then add a distribution monitor per (site, code) that pages on a step change in mean or median.',
+								'**Fix:** map by (site, local code, **unit string**), not by local code alone. Validate OBX-6 against the units allowed for each LOINC ([[ucum|UCUM]]), and **reject** mismatches rather than convert silently. Then add a distribution monitor per (site, code) that pages on a step change in mean or median.',
 								'**Data remediation:** re-code every Site C glucose result since the swap to 14749-6 (or convert to mg/dL with the exact factor and record the provenance). Never multiply by "18" in one place and "18.016" in another: rounding differences break equality checks and trend lines.'
 							]
 						}
@@ -602,14 +602,14 @@ scanned and masked, with a person checking every image the scanner flags.`,
 					answer: [
 						{
 							type: 'p',
-							text: '**Pseudonyms derived from a mutable identifier inherit its mutations.** An MRN is not a person: it can be retired by a merge or split by an unmerge ([[mrn-merge]]). A deterministic [[pseudonymization|pseudonym]] of the MRN faithfully reproduces both errors in the research world, where nobody sees the merge messages.'
+							text: '**Pseudonyms derived from a mutable identifier inherit its mutations.** An [[mrn|MRN]] is not a person: it can be retired by a merge or split by an unmerge ([[mrn-merge]]). A deterministic [[pseudonymization|pseudonym]] of the MRN faithfully reproduces both errors in the research world, where nobody sees the merge messages.'
 						},
 						{
 							type: 'ranked',
 							items: [
 								{
 									title: 'Key pseudonyms on the enterprise identity, not the MRN.',
-									body: 'If the organisation runs an EMPI (enterprise master patient index), pseudonymise its enterprise ID, which absorbs merges. If not, keep a **lineage table** in the de-id service: (old pseudonym → surviving pseudonym, effective time, source message).'
+									body: 'If the organisation runs an [[empi|EMPI]] (enterprise master patient index), pseudonymise its enterprise ID, which absorbs merges. If not, keep a **lineage table** in the de-id service: (old pseudonym → surviving pseudonym, effective time, source message).'
 								},
 								{
 									title: 'Process A40 / A37 (unmerge) as events in the research pipeline.',
@@ -664,7 +664,7 @@ scanned and masked, with a person checking every image the scanner flags.`,
 								},
 								{
 									title: 'Stripping `W/` probably causes the constant 412s that motivated the fallback.',
-									body: 'Many FHIR servers emit weak ETags and compare `If-Match` using exactly that form. Sending `"7"` instead of `W/"7"` never matches, so every update 412s, and the fallback runs every time. Two bugs combined into "it works, mostly".'
+									body: 'Many FHIR servers emit weak [[etag|ETag]]s and compare `If-Match` using exactly that form. Sending `"7"` instead of `W/"7"` never matches, so every update 412s, and the fallback runs every time. Two bugs combined into "it works, mostly".'
 								}
 							]
 						},
@@ -685,8 +685,8 @@ scanned and masked, with a person checking every image the scanner flags.`,
 							head: ['Event', 'Source', 'Timestamp as sent', 'Stored as (UTC)'],
 							rows: [
 								['Order: morphine 2 mg IV', 'EHR (FHIR)', '`2026-10-25T01:20:00+00:00` (the *second* 01:20, after clocks went back)', '01:20Z'],
-								['Administered', 'Infusion pump gateway (HL7 v2 `OBX-14`)', '`202610250145` (no offset)', '00:45Z (receiver assumed the *first* 01:45, BST +01:00)'],
-								['MAR check', '', '', '**"Dose given 35 min before it was ordered"**']
+								['Administered', 'Infusion pump gateway ([[hl7-v2|HL7]] v2 `OBX-14`)', '`202610250145` (no offset)', '00:45Z (receiver assumed the *first* 01:45, BST +01:00)'],
+								['[[mar|MAR]] check', '', '', '**"Dose given 35 min before it was ordered"**']
 							]
 						},
 						{ type: 'p', text: 'This happened on the night clocks went back (Europe/London, 25 Oct 2026, 02:00 BST → 01:00 GMT).' }
@@ -729,7 +729,7 @@ scanned and masked, with a person checking every image the scanner flags.`,
 							type: 'list',
 							items: [
 								'1,000,000 clinical notes for a research release.',
-								'Evaluation on 2,000 annotated notes: **recall 99.0%**, precision 93% (per PHI entity).',
+								'Evaluation on 2,000 annotated notes: **recall 99.0%**, precision 93% (per [[phi|PHI]] entity).',
 								'Average **20 PHI mentions per note** (names, dates, MRNs, phone numbers, addresses).',
 								'Leadership asks: "99% is great, can we ship?"'
 							]
@@ -755,7 +755,7 @@ scanned and masked, with a person checking every image the scanner flags.`,
 						{
 							type: 'list',
 							items: [
-								'**Layer defences:** structured-field removal first (headers, signatures, templates), then NER, then surrogate replacement (realistic fake names and shifted dates, "hiding in plain sight", so leftover real names are hard to tell from the fakes), then access controls on the release (data-use agreement, enclave, no download).',
+								'**Layer defences:** structured-field removal first (headers, signatures, templates), then [[ner|NER]], then surrogate replacement (realistic fake names and shifted dates, "hiding in plain sight", so leftover real names are hard to tell from the fakes), then access controls on the release (data-use agreement, enclave, no download).',
 								'**Measure what matters:** per-type recall with confidence intervals on a test set that represents the release (all note types and sites), not a convenience sample.',
 								'**QA sampling with the rule of three:** if a random sample of *n* notes shows **zero** leaks, the 95% upper bound on the per-note leak rate is ≈ 3 / *n*. To claim < 0.1% of notes leak, you need ≈ **3,000** reviewed notes with zero misses. "We checked 100 and found nothing" only supports < 3%.'
 							]
@@ -783,7 +783,7 @@ OUT: "Hx of [NAME]'s disease, on carbidopa. [NAME] disease in remission.
 					answer: [
 						{
 							type: 'p',
-							text: 'Two failures with the same root: the model learned "capitalised word that is also a surname = name", without clinical context. It over-redacts **eponyms** (Parkinson, Graves, Wilson, Down), which destroys research value (precision), and under-redacts the **actual** relative\'s name and a first name that is also a common word (Hope). "Reading" is a town (a location identifier) and also an English word. This is the [[recall-precision]] trade-off made concrete.'
+							text: 'Two failures with the same root: the model learned "capitalised word that is also a surname = name", without clinical context. It over-redacts **[[medical-eponym|eponyms]]** (Parkinson, Graves, Wilson, Down), which destroys research value (precision), and under-redacts the **actual** relative\'s name and a first name that is also a common word (Hope). "Reading" is a town (a location identifier) and also an English word. This is the [[recall-precision]] trade-off made concrete.'
 						},
 						{
 							type: 'list',
@@ -827,12 +827,12 @@ OUT: "Hx of [NAME]'s disease, on carbidopa. [NAME] disease in remission.
 								]
 							}
 						},
-						{ type: 'p', text: 'Privacy review approved the design: the LLM provider has a BAA and no-retention terms, and outputs are redacted before display.' }
+						{ type: 'p', text: 'Privacy review approved the design: the LLM provider has a [[hipaa|BAA]] and no-retention terms, and outputs are redacted before display.' }
 					],
 					answer: [
 						{
 							type: 'p',
-							text: '**The review covered the model, not the plumbing.** Auto-instrumentation records prompts as span attributes, so full PHI sits in an APM vendor (US region, 30-day retention, probably no BAA for this data). The error tracker attaches request bodies to retries, and its default scrubbing knows `password`, not `MRN`. Redaction runs **after** generation, so it protects the screen and none of the copies. This is the classic [[phi-in-telemetry]] leak.'
+							text: '**The review covered the model, not the plumbing.** Auto-instrumentation records prompts as [[trace-span|span attributes]], so full PHI sits in an [[apm|APM]] vendor (US region, 30-day retention, probably no BAA for this data). The error tracker attaches request bodies to retries, and its default [[pii-redaction|scrubbing]] knows `password`, not `MRN`. Redaction runs **after** generation, so it protects the screen and none of the copies. This is the classic [[phi-in-telemetry]] leak.'
 						},
 						{
 							type: 'ranked',
@@ -872,7 +872,7 @@ OUT: "Hx of [NAME]'s disease, on carbidopa. [NAME] disease in remission.
 							type: 'list',
 							items: [
 								'**Erdheim–Chester, k = 1:** a disease with only a few hundred known cases worldwide is an identifier in itself. Suppress the row, or generalise the diagnosis to its category.',
-								'**Age 97:** exact ages over 89 are an identifier under HIPAA Safe Harbor; they must be grouped as "90+". It is also k = 1. Generalise and re-check.',
+								'**Age 97:** exact ages over 89 are an identifier under [[hipaa]] Safe Harbor; they must be grouped as "90+". It is also k = 1. Generalise and re-check.',
 								'**The 90+ / M / 036 group, k = 6:** it passes k ≥ 5, but ZIP3 "036" is a sparse area. Safe Harbor requires ZIP3s with fewer than 20,000 residents to be reported as "000". Check the census population, not just k.',
 								'**HIV, k = 7 but not diverse:** everyone in the group shares the sensitive attribute (and regimen and clinic). Knowing that a 45-year-old man from 021 is in the dataset reveals his HIV status. k-anonymity holds; **l-diversity** fails ([[k-anonymity]]).',
 								'**Linkage you didn\'t model:** the partner may hold other data (news reports, voter rolls). Combinations of [[quasi-identifier|quasi-identifiers]] beyond the three you checked (admission dates, rare procedures) can single people out.'
@@ -917,7 +917,7 @@ OUT: "Hx of [NAME]'s disease, on carbidopa. [NAME] disease in remission.
 								]
 							}
 						},
-						{ type: 'p', text: 'Pneumothorax prevalence: ~8% of ED chest X-rays, ~0.5% of outpatient ones. Radiologists now ignore the flag.' }
+						{ type: 'p', text: 'Pneumothorax [[base-rate-fallacy|prevalence]]: ~8% of [[emergency-department|ED]] chest X-rays, ~0.5% of outpatient ones. Radiologists now ignore the flag.' }
 					],
 					answer: [
 						{

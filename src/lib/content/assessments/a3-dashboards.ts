@@ -52,7 +52,7 @@ const g1: Question = {
 	prompt: [
 		{
 			type: 'p',
-			text: 'Page at 14:16: `checkout-api` p99 above 4 s. The database team says Postgres is fine. `checkout-api` runs 3 pods, each with a pool of 20 DB connections. Read the dashboard and write the causal chain.'
+			text: 'Page at 14:16: `checkout-api` [[percentiles|p99]] above 4 s. The database team says Postgres is fine. `checkout-api` runs 3 pods, each with a pool of 20 DB connections. Read the dashboard and write the causal chain.'
 		},
 		{
 			type: 'dashboard',
@@ -107,7 +107,7 @@ const g1: Question = {
 			type: 'callout',
 			tone: 'warn',
 			title: 'Red herring',
-			text: 'The GC pause bump at 14:22–14:30 comes **after** latency had already exploded: thousands of queued requests hold buffers in memory, so the heap fills and GC works harder. It’s a symptom of the queue, not its cause. Anything that starts after the first deviation can’t be the trigger.'
+			text: 'The [[gc-pause|GC]] pause bump at 14:22–14:30 comes **after** latency had already exploded: thousands of queued requests hold buffers in memory, so the heap fills and GC works harder. It’s a symptom of the queue, not its cause. Anything that starts after the first deviation can’t be the trigger.'
 		},
 		{
 			type: 'p',
@@ -127,7 +127,7 @@ const g2: Question = {
 	prompt: [
 		{
 			type: 'p',
-			text: 'A platform engineer “right-sized” `pricing-svc` (JVM, 8 request threads) because it “only ever uses 0.6 cores”. Nobody else changed anything. The team says CPU is clearly not the problem: look at the usage panel.'
+			text: 'A platform engineer “right-sized” `pricing-svc` ([[jvm|JVM]], 8 request threads) because it “only ever uses 0.6 cores”. Nobody else changed anything. The team says CPU is clearly not the problem: look at the usage panel.'
 		},
 		{
 			type: 'dashboard',
@@ -192,7 +192,7 @@ const g3: Question = {
 	prompt: [
 		{
 			type: 'p',
-			text: 'Product-page latency got worse throughout the day, with no deploy after 07:00. Redis `maxmemory` is 6 GB, policy `volatile-lru`. The cache stores product JSON with a 15-minute TTL. A new “recently viewed” feature launched at 07:00 and stores each visitor’s list in the same Redis.'
+			text: 'Product-page latency got worse throughout the day, with no deploy after 07:00. Redis `maxmemory` is 6 GB, policy `volatile-lru`. The cache stores product JSON with a 15-minute [[ttl|TTL]]. A new “recently viewed” feature launched at 07:00 and stores each visitor’s list in the same Redis.'
 		},
 		{
 			type: 'dashboard',
@@ -216,7 +216,7 @@ const g3: Question = {
 	answer: [
 		{
 			type: 'p',
-			text: '**Two phases.** 07:00–12:40: memory climbs linearly from 3.1 GB to the 6 GB ceiling while total keys climb from 4.2 M to ~9 M, and nothing else changes. That’s the new feature writing keys. From 12:40 (memory hits `maxmemory`): evictions jump to ~850/s, *keys with TTL* collapse from 4.1 M toward 0.9 M, hit rate slides 95% → ~61%, Postgres reads go 1.2 k → 9.4 k QPS, and p95 goes 60 → 340 ms.'
+			text: '**Two phases.** 07:00–12:40: memory climbs linearly from 3.1 GB to the 6 GB ceiling while total keys climb from 4.2 M to ~9 M, and nothing else changes. That’s the new feature writing keys. From 12:40 (memory hits `maxmemory`): [[eviction|evictions]] jump to ~850/s, *keys with TTL* collapse from 4.1 M toward 0.9 M, hit rate slides 95% → ~61%, Postgres reads go 1.2 k → 9.4 k QPS, and p95 goes 60 → 340 ms.'
 		},
 		{
 			type: 'ranked',
@@ -260,7 +260,7 @@ const g4: Question = {
 	prompt: [
 		{
 			type: 'p',
-			text: '`order-events` topic, 6 partitions, consumer group `fulfilment`. Orders from some customers are shipping hours late. At 09:30 someone scaled the consumers from 6 to 12 pods “to clear the lag”.'
+			text: '`order-events` [[kafka|topic]], 6 partitions, [[consumer-group|consumer group]] `fulfilment`. Orders from some customers are shipping hours late. At 09:30 someone scaled the consumers from 6 to 12 pods “to clear the lag”.'
 		},
 		{
 			type: 'dashboard',
@@ -322,7 +322,7 @@ const k1: Question = {
 	prompt: [
 		{
 			type: 'p',
-			text: '`orders-api` calls `inventory-api` with a service token (lifetime 300 s) fetched from the auth server and cached in-process. Users report occasional “couldn’t reserve stock, please retry”.'
+			text: '`orders-api` calls `inventory-api` with a service [[jwt|token]] (lifetime 300 s) fetched from the auth server and cached in-process. Users report occasional “couldn’t reserve stock, please retry”.'
 		},
 		{
 			type: 'logs',
@@ -428,7 +428,7 @@ const k2: Question = {
 			items: [
 				{
 					title: 'The backend deploy made validation strict, and old app versions (4.x, ~17% of iOS users) send `quantity` as a string.',
-					body: 'The old lenient validator coerced `"2"` to `2`; the strict one rejects it. “No mobile release today” is true and irrelevant: the *server* changed its contract. “iPhone only” is a correlation: the 4.x builds still in use are iOS (Android force-updated earlier, or 4.x Android serialized correctly). It’s a backward-compatibility break.',
+					body: 'The old lenient validator [[type-coercion|coerced]] `"2"` to `2`; the strict one rejects it. “No mobile release today” is true and irrelevant: the *server* changed its contract. “iPhone only” is a correlation: the 4.x builds still in use are iOS (Android force-updated earlier, or 4.x Android serialized correctly). It’s a backward-compatibility break.',
 					confirm: 'Replay a captured 4.9.2 request body against v2.13 and v2.14. Group 400s by `client.app_version × client.platform`.'
 				}
 			]
@@ -441,7 +441,7 @@ const k2: Question = {
 		},
 		{
 			type: 'p',
-			text: '**Now:** roll back v2.14 or ship a coercion shim for `client.app_version < 5`. **Prevent:** contract tests using recorded payloads from every supported client version, a minimum-supported-version policy, and canary rollouts watched on **4xx by client version** (a 400 spike is an outage for the user even though it’s “their fault” by HTTP semantics).'
+			text: '**Now:** roll back v2.14 or ship a coercion shim for `client.app_version < 5`. **Prevent:** [[contract-testing|contract tests]] using recorded payloads from every supported client version, a minimum-supported-version policy, and [[canary-analysis|canary rollouts]] watched on **4xx by client version** (a 400 spike is an outage for the user even though it’s “their fault” by HTTP semantics).'
 		}
 	]
 };
@@ -506,7 +506,7 @@ const k3: Question = {
 			items: [
 				{
 					title: 'v8.3.0 changed the `user` log field from a string to an object, and the existing index maps `user` as `keyword`: every new document is rejected.',
-					body: 'Elasticsearch fixes a field’s type when an index first sees it. A [[log-mapping-conflict|mapping conflict]] rejects the whole document, and with the shipper’s DLQ disabled the logs are dropped. The last accepted line (15:24:58) still has `user: "u_1192"`; the deploy completed 0.7 s later.',
+					body: '[[elasticsearch|Elasticsearch]] fixes a field’s type when an index first sees it. A [[log-mapping-conflict|mapping conflict]] rejects the whole document, and with the shipper’s [[dead-letter-queue|DLQ]] disabled the logs are dropped. The last accepted line (15:24:58) still has `user: "u_1192"`; the deploy completed 0.7 s later.',
 					confirm: 'The shipper error names the field and shows the object preview. `GET logs-payments-*/_mapping/field/user`.'
 				}
 			]
@@ -533,7 +533,7 @@ const k4: Question = {
 	tag: 'tricky',
 	minutes: 10,
 	prompt: [
-		{ type: 'p', text: 'Since 09:00, ~40% of outbound calls from `pay-gw` to the bank’s mTLS API fail. Security confirms the client certificate was rotated at 07:30 and the new one is valid until next year. The Kubernetes secret holds the new cert.' },
+		{ type: 'p', text: 'Since 09:00, ~40% of outbound calls from `pay-gw` to the bank’s [[mtls|mTLS]] API fail. Security confirms the client certificate was rotated at 07:30 and the new one is valid until next year. The Kubernetes secret holds the new cert.' },
 		{
 			type: 'dashboard',
 			dashboard: {
@@ -579,11 +579,11 @@ const k4: Question = {
 			type: 'callout',
 			tone: 'warn',
 			title: 'Red herring',
-			text: '`dns lookup slow` on pod b looks suspicious next to the errors but appears on healthy pods too, and DNS problems produce connection errors, not `bad certificate`.'
+			text: '`dns lookup slow` on pod b looks suspicious next to the errors but appears on healthy pods too, and [[dns|DNS]] problems produce connection errors, not `bad certificate`.'
 		},
 		{
 			type: 'p',
-			text: '**Now:** restart a and b (rolling). **Properly:** hot-reload certs on file change (or use a sidecar/mesh that does), rotate with overlap (new cert live days before the old one expires), and export `client_cert_not_after_seconds` from each process so you alert on what is *in use*, not on what’s in the secret.'
+			text: '**Now:** restart a and b (rolling). **Properly:** hot-reload certs on file change (or use a sidecar/[[service-mesh|mesh]] that does), rotate with overlap (new cert live days before the old one expires), and export `client_cert_not_after_seconds` from each process so you alert on what is *in use*, not on what’s in the secret.'
 		}
 	]
 };
@@ -712,7 +712,7 @@ const c3: Question = {
 	tag: 'tricky',
 	minutes: 10,
 	prompt: [
-		{ type: 'p', text: 'Queue `order-confirmations` (standard SQS, visibility timeout **30 s**, maxReceiveCount 3 → DLQ). Workers send an email and then delete the message. Two complaints: duplicate emails, and confirmations arriving 40+ minutes late.' },
+		{ type: 'p', text: 'Queue `order-confirmations` (standard [[amazon-sqs|SQS]], visibility timeout **30 s**, maxReceiveCount 3 → DLQ). Workers send an email and then delete the message. Two complaints: duplicate emails, and confirmations arriving 40+ minutes late.' },
 		{
 			type: 'dashboard',
 			dashboard: {
@@ -755,7 +755,7 @@ const c3: Question = {
 			type: 'list',
 			items: [
 				'**Now:** raise the visibility timeout to well above worst-case duration (e.g. 180 s). Redrive the DLQ only after deduping.',
-				'**Properly:** heartbeat `ChangeMessageVisibility` for long jobs, render PDFs in a separate step, and make the consumer [[idempotent-consumer|idempotent]] (record `order_id` email-sent before sending, or use the provider’s idempotency key).',
+				'**Properly:** [[heartbeat|heartbeat]] `ChangeMessageVisibility` for long jobs, render PDFs in a separate step, and make the consumer [[idempotent-consumer|idempotent]] (record `order_id` email-sent before sending, or use the provider’s [[idempotency-key|idempotency key]]).',
 				'Alarm on `Received / Sent > 1.2` and on [[queue-age|age of oldest message]].'
 			]
 		}
@@ -771,7 +771,7 @@ const c4: Question = {
 	tag: 'tricky',
 	minutes: 8,
 	prompt: [
-		{ type: 'p', text: 'Flash sale at 10:20. The `sales` DynamoDB table is provisioned at 10,000 WCU. Writes start failing with `ProvisionedThroughputExceededException`. A teammate wants to raise capacity to 40,000.' },
+		{ type: 'p', text: 'Flash sale at 10:20. The `sales` DynamoDB table is provisioned at 10,000 [[dynamodb|WCU]]. Writes start failing with `ProvisionedThroughputExceededException`. A teammate wants to raise capacity to 40,000.' },
 		{
 			type: 'dashboard',
 			dashboard: {
@@ -825,7 +825,7 @@ const c5: Question = {
 	tag: 'tricky',
 	minutes: 10,
 	prompt: [
-		{ type: 'p', text: 'Since the team replaced nginx with the Node.js server directly behind the ALB last week, there’s a constant trickle of 502s. App logs show no errors and no matching requests.' },
+		{ type: 'p', text: 'Since the team replaced nginx with the Node.js server directly behind the [[l4-vs-l7-load-balancing|ALB]] last week, there’s a constant trickle of 502s. App logs show no errors and no matching requests.' },
 		{
 			type: 'dashboard',
 			dashboard: {
@@ -889,7 +889,7 @@ const c6: Question = {
 	tag: 'core',
 	minutes: 8,
 	prompt: [
-		{ type: 'p', text: 'Private-subnet services reach the internet through one NAT gateway. From ~14:24, calls to the geo-IP partner API time out (`connect ETIMEDOUT`). Calls to other partners are mostly fine. The partner says they see *less* traffic from us than usual.' },
+		{ type: 'p', text: 'Private-subnet services reach the internet through one [[nat-gateway|NAT gateway]]. From ~14:24, calls to the geo-IP partner API time out (`connect ETIMEDOUT`). Calls to other partners are mostly fine. The partner says they see *less* traffic from us than usual.' },
 		{
 			type: 'dashboard',
 			dashboard: {
@@ -909,15 +909,15 @@ const c6: Question = {
 	answer: [
 		{
 			type: 'p',
-			text: 'The geo-enrichment flag goes to 100% at 14:10. Connection attempts jump ~4.5× (2.2 k → 9.8 k/min) while bytes out rise only ~25%: lots of tiny new connections. Active connections climb to ~55 k by 14:24, exactly when *ErrorPortAllocation* starts (~2,400/min) and established falls below attempts. 92% of connections go to one IP:port.'
+			text: 'The geo-enrichment flag goes to 100% at 14:10. Connection attempts jump ~4.5× (2.2 k → 9.8 k/min) while bytes out rise only ~25%: lots of tiny new connections. Active connections climb to ~55 k by 14:24, exactly when *ErrorPortAllocation* starts (~2,400/min) and established falls below attempts. 92% of connections go to one IP:[[ephemeral-ports|port]].'
 		},
 		{
 			type: 'ranked',
 			items: [
 				{
 					title: '[[nat-port-exhaustion|NAT port exhaustion]] to a single destination: the new feature opens a fresh TCP connection per lookup, with no keep-alive.',
-					body: 'A NAT gateway can hold ~55,000 simultaneous connections to one destination IP+port. Each new connection takes a port, and closed connections linger in TIME_WAIT. At 9.8 k new connections/min, mostly to 203.0.113.40:443, the table fills in ~15 minutes. New connections to that partner then can’t get a port, which the app sees as connect timeouts. The partner sees *less* traffic because our connections never leave the NAT. Other partners are mostly fine because the limit is per destination.',
-					confirm: 'ErrorPortAllocation > 0 (shown). Check the HTTP client config of the geo feature: likely a new client per call or `Connection: close`.'
+					body: 'A NAT gateway can hold ~55,000 simultaneous connections to one destination IP+port. Each new connection takes a port, and closed connections linger in [[tcp|TIME_WAIT]]. At 9.8 k new connections/min, mostly to 203.0.113.40:443, the table fills in ~15 minutes. New connections to that partner then can’t get a port, which the app sees as connect timeouts. The partner sees *less* traffic because our connections never leave the NAT. Other partners are mostly fine because the limit is per destination.',
+					confirm: 'ErrorPortAllocation > 0 (shown), and the [[vpc-flow-logs|VPC Flow Logs]] panel pins 92% of connections on one partner IP. Check the HTTP client config of the geo feature: likely a new client per call or `Connection: close`.'
 				}
 			]
 		},
@@ -936,7 +936,7 @@ const c7: Question = {
 	tag: 'tricky',
 	minutes: 10,
 	prompt: [
-		{ type: 'p', text: 'Error budget burning since 16:20. 9 instances across three availability zones (3 per AZ), behind an ALB with cross-zone balancing on. Health check: `GET /health` returns 200 if the process is up.' },
+		{ type: 'p', text: '[[error-budget|Error budget]] burning since 16:20. 9 instances across three availability zones (3 per AZ), behind an ALB with cross-zone balancing on. [[health-check|Health check]]: `GET /health` returns 200 if the process is up.' },
 		{
 			type: 'dashboard',
 			dashboard: {
@@ -956,7 +956,7 @@ const c7: Question = {
 	answer: [
 		{
 			type: 'p',
-			text: 'From 16:20 only **eu-west-1b** deviates: p99 0.23 → 2.4 s, target 5xx 2 → ~140, TCP retransmits 12 → ~480/s. 1a and 1c are untouched. All 9 hosts stay healthy. 3 of 9 hosts ≈ a third of requests.'
+			text: 'From 16:20 only **eu-west-1b** deviates: p99 0.23 → 2.4 s, target 5xx 2 → ~140, [[tcp|TCP retransmits]] 12 → ~480/s. 1a and 1c are untouched. All 9 hosts stay healthy. 3 of 9 hosts ≈ a third of requests.'
 		},
 		{
 			type: 'ranked',
@@ -976,7 +976,7 @@ const c7: Question = {
 		},
 		{
 			type: 'p',
-			text: '**Now:** shift traffic away from 1b (zonal shift, or deregister its targets), with 1a/1c capacity scaled up to absorb it. **Properly:** a [[deep-health-check|readiness check]] that exercises local dependencies, outlier detection that compares peers, and alarms grouped by AZ so a one-zone problem looks like one.'
+			text: '**Now:** shift traffic away from 1b (zonal shift, or deregister its targets), with 1a/1c capacity scaled up to absorb it. **Properly:** a [[deep-health-check|readiness check]] that exercises local dependencies, [[outlier-detection|outlier detection]] that compares peers, and alarms grouped by AZ so a one-zone problem looks like one.'
 		}
 	]
 };
@@ -998,7 +998,7 @@ const t1: Question = {
 	tag: 'core',
 	minutes: 8,
 	prompt: [
-		{ type: 'p', text: '`catalog-api`, 4 instances behind a round-robin balancer. A 25% rollout of a new pricing [[feature-flag]] went out at 09:54. Separately, instance `i-0c` was replaced at 09:53 after a hardware notice.' },
+		{ type: 'p', text: '`catalog-api`, 4 instances behind a [[round-robin|round-robin]] balancer. A 25% rollout of a new pricing [[feature-flag]] went out at 09:54. Separately, instance `i-0c` was replaced at 09:53 after a hardware notice.' },
 		{
 			type: 'dashboard',
 			dashboard: {
@@ -1023,7 +1023,7 @@ const t1: Question = {
 			items: [
 				{
 					title: 'Two candidate 25% populations: the new instance `i-0c` (1 of 4 = 25%) or the 25% flag cohort. The heatmap can’t tell them apart; one group-by can.',
-					body: 'Both events happened within a minute and both explain exactly 25%. That’s the point of the question: the shape says “a distinct subset”, and your next step is to split latency by `instance` and by `flag_variant`. If it’s the instance: cold caches or JIT on the fresh host should *improve* over minutes, and this band doesn’t fade, so suspect a misconfiguration on the replacement (wrong instance type, missing local cache, different AZ). If it’s the flag: the new pricing path (an extra call per item, an [[n-plus-one]]) is slow for everyone in the cohort.',
+					body: 'Both events happened within a minute and both explain exactly 25%. That’s the point of the question: the shape says “a distinct subset”, and your next step is to split latency by `instance` and by `flag_variant`. If it’s the instance: cold caches or [[jit-warmup|JIT]] on the fresh host should *improve* over minutes, and this band doesn’t fade, so suspect a misconfiguration on the replacement (wrong instance type, missing local cache, different AZ). If it’s the flag: the new pricing path (an extra call per item, an [[n-plus-one]]) is slow for everyone in the cohort.',
 					confirm: 'p99 grouped by instance and by flag variant. Turning the flag to 0% is the cheaper experiment; draining `i-0c` is the other.'
 				}
 			]
@@ -1077,7 +1077,7 @@ const t2: Question = {
 			type: 'ranked',
 			items: [
 				{
-					title: 'Shard 5’s node is busy with a segment merge (the span note), so it’s slow for every query that touches it.',
+					title: 'Shard 5’s node is busy with a [[elasticsearch|segment merge]] (the span note), so it’s slow for every query that touches it.',
 					body: 'Merges, GC, a [[noisy-neighbor]] or a hot shard all make one node slow. With 8 shards per query, even a 2% per-shard slow rate makes ~15% of requests slow: 1 − 0.98⁸ ≈ 15%, matching the observed rate. That’s [[tail-latency]] amplification.',
 					confirm: 'Group shard span duration by `node`: index-7 will stand out. Check merge/GC metrics on that node.'
 				}
@@ -1138,7 +1138,7 @@ const t3: Question = {
 			items: [
 				{
 					title: 'A job that runs every 15 minutes updates inventory rows in one long transaction (~4 min) and holds their row locks until it commits.',
-					body: 'Any request touching a locked SKU queues behind it: that’s [[lock-wait]]. The guilty party is the *holder*, not the waiting UPDATE, which is why optimizing the cancel query would do nothing. The oldest-transaction panel lines up exactly with the waits.',
+					body: 'Any request touching a locked SKU queues behind it (the trace’s `SELECT order FOR UPDATE` is a [[select-for-update|locking read]], so it must wait): that’s [[lock-wait]]. The guilty party is the *holder*, not the waiting UPDATE, which is why optimizing the cancel query would do nothing. The oldest-transaction panel lines up exactly with the waits.',
 					confirm: 'During a spike: `SELECT pid, now() - xact_start, query FROM pg_stat_activity ORDER BY xact_start LIMIT 5` and `pg_blocking_pids(<waiting pid>)`.'
 				}
 			]
@@ -1151,7 +1151,7 @@ const t3: Question = {
 		},
 		{
 			type: 'p',
-			text: '**Fix:** have the job commit in small batches (e.g. 500 rows), update rows in a consistent order, set `lock_timeout` on user-facing paths so they fail fast rather than hang, and alert on oldest-transaction age.'
+			text: '**Fix:** have the job commit in small batches (e.g. 500 rows), update rows in a consistent order, set a [[lock-timeout|lock timeout]] (`lock_timeout`) on user-facing paths so they fail fast rather than hang, and alert on oldest-transaction age.'
 		}
 	]
 };
@@ -1163,7 +1163,7 @@ const t4: Question = {
 	tag: 'tricky',
 	minutes: 8,
 	prompt: [
-		{ type: 'p', text: 'The checkout team sees `payments.charge` taking 2+ s on ~1 in 3 checkouts. The payments team’s server-side p99 is 120 ms and they refuse the ticket. Payments runs 3 instances behind DNS round-robin; one was decommissioned yesterday.' },
+		{ type: 'p', text: 'The checkout team sees `payments.charge` taking 2+ s on ~1 in 3 checkouts. The payments team’s server-side p99 is 120 ms and they refuse the ticket. Payments runs 3 instances behind DNS [[round-robin|round-robin]]; one was decommissioned yesterday.' },
 		{
 			type: 'trace',
 			trace: {
@@ -1203,7 +1203,7 @@ const t4: Question = {
 		},
 		{
 			type: 'p',
-			text: '**Fix:** respect DNS TTL / re-resolve on connect failure, a short connect timeout (~100–200 ms inside a datacentre) separate from the read timeout, try a *different* endpoint on retry, and outlier ejection in the client or mesh. Make sure the charge uses an idempotency key, since it’s being retried.'
+			text: '**Fix:** respect [[dns-ttl|DNS TTL]] / re-resolve on connect failure, a short connect timeout (~100–200 ms inside a datacentre) separate from the read timeout, try a *different* endpoint on retry, and outlier ejection in the client or mesh. Make sure the charge uses an idempotency key, since it’s being retried.'
 		}
 	]
 };
@@ -1395,7 +1395,7 @@ const te6: Question = {
 	answer: [
 		{
 			type: 'p',
-			text: 'The left panel has “null as zero” on; the right panel shows the same data with nulls as gaps. Queue depth didn’t drop to zero at 14:18; the metric **stopped arriving** (exporter crashed, scrape failing). A real drain would slope down, not fall off a cliff in one scrape. Check `up{job="queue-exporter"}`, and add a [[no-data-alert]].'
+			text: 'The left panel has “null as zero” on; the right panel shows the same data with nulls as gaps. Queue depth didn’t drop to zero at 14:18; the metric **stopped arriving** (exporter crashed, [[prometheus|scrape]] failing). A real drain would slope down, not fall off a cliff in one scrape. Check `up{job="queue-exporter"}`, and add a [[no-data-alert]].'
 		}
 	]
 };
@@ -1546,7 +1546,7 @@ const assessment: Assessment = {
 				{
 					type: 'list',
 					items: [
-						'In a waterfall, the **critical path** is the chain of spans the parent actually waited on. Optimizing anything off it changes nothing.',
+						'In a waterfall, the **[[trace-span|critical path]]** is the chain of spans the parent actually waited on. Optimizing anything off it changes nothing.',
 						'**Gaps** inside a parent are uninstrumented time: pools, locks, GC, CPU.',
 						'In a heatmap, a **second band** means a subset; a **rising band** means everything.'
 					]

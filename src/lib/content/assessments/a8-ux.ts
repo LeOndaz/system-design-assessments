@@ -298,7 +298,7 @@ const assessment: Assessment = {
 										kind: 'badge',
 										text: 'Sponsored',
 										tone: 'info',
-										decoy: 'Looks like clutter, but labelling paid placements is a legal requirement in most markets (e.g. FTC, EU DSA) and a trust signal. Removing it would be the bug.'
+										decoy: 'Looks like clutter, but labelling paid placements is a legal requirement in most markets (e.g. FTC, EU [[digital-services-act|DSA]]) and a trust signal. Removing it would be the bug.'
 									}
 								]
 							}
@@ -435,7 +435,7 @@ const assessment: Assessment = {
 											['☑', '#B19E…04A', 'Dana W.', 'Paid', '$86.40'],
 											['☑', '#C88D…77F', 'M. Okafor', 'Refunded', '$412.10']
 										],
-										issue: 'Money column left-aligned in a proportional font, so $1,204.00 and $86.40 are hard to compare at a glance. Right-align numbers with tabular figures.'
+										issue: 'Money column left-aligned in a proportional font, so $1,204.00 and $86.40 are hard to compare at a glance. Right-align numbers with [[tabular-figures|tabular figures]].'
 									},
 									{
 										kind: 'text',
@@ -503,7 +503,7 @@ const assessment: Assessment = {
 												variant: 'ghost',
 												text: '👁',
 												look: { tiny: true },
-												issue: 'Show/hide toggle has no [[accessible-name]] or state (`aria-pressed`), and its target is far below 44 pt.'
+												issue: 'Show/hide toggle has no [[accessible-name]] or state (`aria-pressed`), and its target is far below [[tap-target|44 pt]].'
 											}
 										]
 									},
@@ -525,7 +525,7 @@ const assessment: Assessment = {
 										kind: 'checkbox',
 										label: 'Send me product news and offers',
 										checked: true,
-										issue: 'Pre-ticked marketing consent. Under GDPR consent must be an affirmative opt-in, so these subscribers aren\'t validly consented, and the list becomes a legal liability.'
+										issue: 'Pre-ticked marketing consent. Under [[gdpr|GDPR]] consent must be an affirmative opt-in, so these subscribers aren\'t validly consented, and the list becomes a legal liability.'
 									},
 									{ kind: 'button', variant: 'primary', text: 'Create account', look: { width: 'full' } },
 									{
@@ -625,7 +625,7 @@ const assessment: Assessment = {
 										kind: 'text',
 										text: 'Y-axis: $40k – $52k',
 										look: { size: 'xs' },
-										decoy: 'A non-zero baseline looks like a "lying chart" rule violation, but for a line/sparkline showing *change over time* it\'s appropriate. The zero-baseline rule is about bar charts, where length encodes value.'
+										decoy: 'A non-zero baseline looks like a "lying chart" rule violation, but for a line/[[sparkline|sparkline]] showing *change over time* it\'s appropriate. The zero-baseline rule is about bar charts, where length encodes value.'
 									}
 								]
 							}
@@ -757,7 +757,7 @@ const assessment: Assessment = {
 										kind: 'checkbox',
 										label: 'SMS · Offers and promotions',
 										checked: true,
-										issue: 'Marketing SMS on by default. Promotional texts need prior express consent in most jurisdictions (e.g. TCPA in the US); fines are per message.'
+										issue: 'Marketing SMS on by default. Promotional texts need prior express consent in most jurisdictions (e.g. [[tcpa|TCPA]] in the US); fines are per message.'
 									},
 									{ kind: 'button', variant: 'ghost', text: 'Pause all for 1 hour' },
 									{
@@ -869,7 +869,7 @@ const assessment: Assessment = {
 										kind: 'text',
 										text: 'Warenkorb: 1 Artikel(n)',
 										look: { size: 'xs' },
-										issue: '"Artikel(n)" is a plural hack instead of real plural rules. Use `Intl.PluralRules` / ICU messages ([[i18n-pluralization]]). The same code produces "1 items" in English.'
+										issue: '"Artikel(n)" is a plural hack instead of real plural rules. Use `Intl.PluralRules` / [[icu-messageformat|ICU]] messages ([[i18n-pluralization]]). The same code produces "1 items" in English.'
 									},
 									{ kind: 'heading', text: 'Studio-Kopfhörer X2' },
 									{ kind: 'text', text: '1.299,00 €' },
@@ -955,7 +955,7 @@ const onInput = debounce(async (q: string) => {
   setResults(await res.json());
 }, 150);`
 						},
-						{ type: 'p', text: 'A teammate proposes raising the debounce to 400 ms. Is that the fix?' }
+						{ type: 'p', text: 'A teammate proposes raising the [[debounce|debounce]] to 400 ms. Is that the fix?' }
 					],
 					answer: [
 						{
@@ -1017,7 +1017,7 @@ const onInput = debounce(async (q: string) => {
 							items: [
 								'Roll back only the failed change (flip that one item back), or re-fetch the item from the server on failure.',
 								'Serialize mutations per item; drop responses older than the latest mutation for that item (sequence number).',
-								'Send the intended absolute value with a version (`If-Match`/ETag) so an older request can\'t overwrite a newer one.',
+								'Send the intended absolute value with a version (`If-Match`/[[etag|ETag]]) so an older request can\'t overwrite a newer one.',
 								'Tricky part to say out loud: the server is right; the client is lying. "Server logs look fine" is the clue.'
 							]
 						}
@@ -1094,7 +1094,7 @@ const [filled, setFilled] = useState({ email: false, password: false });
 						},
 						{
 							type: 'p',
-							text: '**Login: [[autofill-events|autofill doesn\'t reliably fire `onChange`]]**, especially before the user has interacted with the page (Chrome may not expose the filled value until a user gesture). The button\'s enabled state is a tally of events instead of the actual values. Don\'t disable submit based on events; read `form.elements` on submit and validate then.'
+							text: '**Login: [[autofill-events|autofill doesn\'t reliably fire `onChange`]]**, especially before the user has interacted with the page (Chrome may not expose the filled value until a [[user-gesture|user gesture]]). The button\'s enabled state is a tally of events instead of the actual values. Don\'t disable submit based on events; read `form.elements` on submit and validate then.'
 						},
 						{
 							type: 'callout',
@@ -1170,7 +1170,7 @@ const [filled, setFilled] = useState({ email: false, password: false });
 					answer: [
 						{
 							type: 'p',
-							text: '**The new [[content-security-policy|Content Security Policy]] is enforcing and blocks the tag manager\'s inline snippet and the ad pixel\'s domain.** Checkout works (orders flat), but the conversion pixel never fires. Your error tracker shows nothing because CSP violations aren\'t JS exceptions; they appear as console messages and `securitypolicyviolation` events nobody collects.'
+							text: '**The new [[content-security-policy|Content Security Policy]] is enforcing and blocks the [[tag-manager|tag manager]]\'s inline snippet and the ad pixel\'s domain.** Checkout works (orders flat), but the [[conversion-pixel|conversion pixel]] never fires. Your error tracker shows nothing because CSP violations aren\'t JS exceptions; they appear as console messages and `securitypolicyviolation` events nobody collects.'
 						},
 						{
 							type: 'list',
@@ -1178,7 +1178,7 @@ const [filled, setFilled] = useState({ email: false, password: false });
 								'Confirm: browser console on the thank-you page ("Refused to load the script…"), and CSP violation reports if a `report-to` endpoint exists.',
 								'Mitigate: add the pixel and tag-manager origins (or a nonce for the inline snippet) to the policy, or temporarily switch to `Content-Security-Policy-Report-Only`.',
 								'Prevent: CSP changes ship report-only first, with violation reports flowing to a dashboard, then enforce.',
-								'Also tell marketing to pause automated bidding adjustments: the ad platform is "learning" from fake data.'
+								'Also tell marketing to pause [[automated-bidding|automated bidding]] adjustments: the ad platform is "learning" from fake data.'
 							]
 						},
 						reply(
@@ -1206,9 +1206,9 @@ const [filled, setFilled] = useState({ email: false, password: false });
 						{
 							type: 'list',
 							items: [
-								'Use the Storage Access API (`document.requestStorageAccess()` after a user gesture), or',
+								'Use the [[third-party-cookie-blocking|Storage Access API]] (`document.requestStorageAccess()` after a user gesture), or',
 								'Open authentication in a top-level popup/window and pass a short-lived token to the iframe, kept in memory (not a cookie), or',
-								'Serve the embed from a subdomain of the partner (first-party) via CNAME, or use partitioned cookies (CHIPS: `Partitioned`) where supported.',
+								'Serve the embed from a subdomain of the partner (first-party) via [[cname-record|CNAME]], or use partitioned cookies (CHIPS: `Partitioned`) where supported.',
 								'Chrome is phasing in similar restrictions, so "works in Chrome" is temporary.'
 							]
 						}
@@ -1331,7 +1331,7 @@ const [filled, setFilled] = useState({ email: false, password: false });
 					answer: [
 						{
 							type: 'p',
-							text: '**The hero image is now discovered late.** TTFB is flat (not the server), image bytes are flat (not a bigger image), JS grew only 12 KB (red herring: parse cost of 12 KB doesn\'t add 1.8 s). The panel that moved is **resource load delay: 0.15 s → 1.9 s**: the browser starts fetching the hero almost 2 s later. Carousel v2 renders slides from JS after hydration and marks images `loading="lazy"`, including the first slide. The preload scanner can\'t see an image that doesn\'t exist in the HTML.'
+							text: '**The hero image is now discovered late.** [[ttfb|TTFB]] is flat (not the server), image bytes are flat (not a bigger image), JS grew only 12 KB (red herring: parse cost of 12 KB doesn\'t add 1.8 s). The panel that moved is **resource load delay: 0.15 s → 1.9 s**: the browser starts fetching the hero almost 2 s later. Carousel v2 renders slides from JS after hydration and marks images `loading="lazy"`, including the first slide. The preload scanner can\'t see an image that doesn\'t exist in the HTML. (All figures here are [[rum|RUM]] field data at [[percentiles|p75]].)'
 						},
 						{
 							type: 'p',
@@ -1342,7 +1342,7 @@ const [filled, setFilled] = useState({ email: false, password: false });
 							items: [
 								'Server-render the first slide as a real `<img>` with `fetchpriority="high"` and no `loading="lazy"`; lazy-load only slides 2+.',
 								'Or `<link rel="preload" as="image" imagesrcset=…>` in the head.',
-								'Add a CI check: the LCP element must be in the initial HTML and not lazy.'
+								'Add a CI check: the [[lcp|LCP]] element must be in the initial HTML and not lazy.'
 							]
 						}
 					]
@@ -1394,13 +1394,13 @@ return <>
 					answer: [
 						{
 							type: 'p',
-							text: '**Main-thread blocking on every keystroke.** INP ends at the next paint after input; each key synchronously filters, sorts and re-renders 2,000 rows before the browser can paint the typed character. The API p95 (180 ms) is a red herring: [[inp|INP]] doesn\'t wait for network, and this filter runs client-side anyway.'
+							text: '**[[main-thread|Main-thread]] blocking on every keystroke.** INP ends at the next paint after input; each key synchronously filters, sorts and re-renders 2,000 rows before the browser can paint the typed character. The API p95 (180 ms) is a red herring: [[inp|INP]] doesn\'t wait for network, and this filter runs client-side anyway.'
 						},
 						{
 							type: 'list',
 							items: [
 								'Keep the input responsive: `useDeferredValue(q)` / `startTransition` for the filtered list, so typing paints first.',
-								'Virtualize the table (render ~40 visible rows, not 2,000).',
+								'[[list-virtualization|Virtualize]] the table (render ~40 visible rows, not 2,000).',
 								'Memoize: sort once when data changes, not per keystroke; precompile the matcher.',
 								'Debouncing the *render* helps, but debouncing a fetch wouldn\'t; there\'s no fetch on this path.'
 							]
@@ -1454,7 +1454,7 @@ return <>
 					answer: [
 						{
 							type: 'p',
-							text: '**The consent banner (shown only to EU visitors) is inserted at the top of the page after load and pushes everything down**, including the Place Order button, so users mis-tap. The font change adds a smaller shift for everyone. Ads are a red herring: there are no ads on checkout, and the ad index didn\'t move.'
+							text: '**The consent banner (shown only to EU visitors) is inserted at the top of the page after load and pushes everything down** (a [[cls|layout shift]]), including the Place Order button, so users mis-tap. The font change adds a smaller shift for everyone. Ads are a red herring: there are no ads on checkout, and the ad index didn\'t move.'
 						},
 						{
 							type: 'list',
@@ -1516,7 +1516,7 @@ return <>
 						{
 							type: 'list',
 							items: [
-								'Fix the sample size in advance from the minimum effect you care about, and only decide at that point; or use a sequential test (e.g. always-valid p-values) built for repeated looks.',
+								'Fix the sample size in advance from the minimum effect you care about, and only decide at that point; or use a sequential test (e.g. always-valid [[statistical-significance|p-values]]) built for repeated looks.',
 								'Report confidence intervals, not just p: on day 5 the interval was something like −1% to +14%.',
 								'For the PM: the change is probably neutral, not harmful. Keep it if it\'s simpler, but drop the forecast.'
 							]
@@ -1699,7 +1699,7 @@ return <>
 						},
 						{
 							type: 'p',
-							text: 'The backend actually returned `422 DAILY_LIMIT_EXCEEDED` (limit €2,000, resets at midnight in the user\'s zone; can be raised in Settings after ID check). The client maps every non-2xx to this banner.'
+							text: 'The backend actually returned `422 DAILY_LIMIT_EXCEEDED` (limit €2,000, resets at midnight in the user\'s zone; can be raised in Settings after [[kyc|ID check]]). The client maps every non-2xx to this banner.'
 						}
 					],
 					answer: [
@@ -1793,7 +1793,7 @@ No money has left your account.`
 								['Error', '"We couldn\'t load your projects. Your data is safe."', 'Retry (and status page link)']
 							]
 						},
-						{ type: 'p', text: 'Root cause in code: a nullish default hiding an error, a cousin of the [[swallowed-exception]].' }
+						{ type: 'p', text: 'Root cause in code: a [[nullish-coalescing|nullish]] default hiding an error, a cousin of the [[swallowed-exception]].' }
 					]
 				},
 				{
@@ -1818,7 +1818,7 @@ No money has left your account.`
 							items: [
 								{
 									title: 'Plurals.',
-									body: 'Polish has distinct forms for 1, 2–4, 5–21, 22–24… ("1 plik", "2 pliki", "5 plików"); Arabic has six categories. Use `Intl.PluralRules` / ICU MessageFormat with every form supplied by translators ([[i18n-pluralization]]). Also: never concatenate translated fragments; word order differs.'
+									body: 'Polish has distinct forms for 1, 2–4, 5–21, 22–24… ("1 plik", "2 pliki", "5 plików"); Arabic has six categories. Use `Intl.PluralRules` / [[icu-messageformat|ICU MessageFormat]] with every form supplied by translators ([[i18n-pluralization]]). Also: never concatenate translated fragments; word order differs.'
 								},
 								{
 									title: 'Fixed-width button.',

@@ -153,7 +153,7 @@ def reserve(order_id: str, sku: str, market: str, idem_key: str) -> Reservation:
 			items: [
 				{
 					title: 'Lost decrements: a second writer appeared for the US stock key, and conflicts resolve [[last-writer-wins]].',
-					body: 'Normally only us-east-1 serves the US, so `stock:DROP-300:US` has one writer and LWW never has a conflict to lose. At 18:02 us-east-1 went over its latency budget and the global LB started spilling retries to **us-west-2** (the *reserve() by serving region* panel: ~600/min there from 18:02). Now two regions read-decrement-write the same key concurrently. Each write carries "the value I computed", not "minus one", so when replication merges them one region\'s decrements are simply overwritten. The log shows it: us-east-1 sold A-77131 (211→210) and A-77134 (210→209), then a replicated `211` arrived and overwrote 209. Two units were sold and the counter went back up.',
+					body: 'Normally only us-east-1 serves the US, so `stock:DROP-300:US` has one writer and LWW never has a conflict to lose. At 18:02 us-east-1 went over its latency budget and the [[load-balancer|global LB]] started spilling retries to **us-west-2** (the *reserve() by serving region* panel: ~600/min there from 18:02). Now two regions read-decrement-write the same key concurrently. Each write carries "the value I computed", not "minus one", so when replication merges them one region\'s decrements are simply overwritten. The log shows it: us-east-1 sold A-77131 (211→210) and A-77134 (210→209), then a replicated `211` arrived and overwrote 209. Two units were sold and the counter went back up.',
 					confirm: 'Count reservations per region from logs and compare with decrements that survived: sum of `stock_before − stock_after` per region vs the 300 → 0 drop in the stock panel.'
 				},
 				{
@@ -164,7 +164,7 @@ def reserve(order_id: str, sku: str, market: str, idem_key: str) -> Reservation:
 				{
 					title: 'Idempotency keys are per region, so a spilled retry becomes a second order.',
 					body: 'The retry of A-77120 reached us-west-2, looked up `idem:us-west-2:8f2c41`, found nothing, and reserved again (`idem_hit=false`). The customer may now hold two reservations and two orders. This is why "people whose app spun" are over-represented: every spilled retry is both a potential duplicate order **and** a concurrent writer.',
-					confirm: 'Group orders by idempotency key or by customer+cart: count keys with >1 order.'
+					confirm: 'Group orders by [[idempotency-key|idempotency key]] or by customer+cart: count keys with >1 order.'
 				}
 			]
 		},
@@ -172,7 +172,7 @@ def reserve(order_id: str, sku: str, market: str, idem_key: str) -> Reservation:
 			type: 'callout',
 			tone: 'warn',
 			title: 'Red herrings',
-			text: '**"Fix NTP and we\'re done"**: skew made it worse, but with two writers LWW loses updates at 0 ms skew too. **The stock panel looks fine** (300 smoothly to 0): it shows what `reserve()` *read*, which is exactly the problem: the counter was being reset upward and decremented again. **Europe being correct** is not luck: EU had a single writer region all evening.'
+			text: '**"Fix [[ntp|NTP]] and we\'re done"**: skew made it worse, but with two writers LWW loses updates at 0 ms skew too. **The stock panel looks fine** (300 smoothly to 0): it shows what `reserve()` *read*, which is exactly the problem: the counter was being reset upward and decremented again. **Europe being correct** is not luck: EU had a single writer region all evening.'
 		},
 		{
 			type: 'heading',
@@ -280,7 +280,7 @@ const g2q: Question = {
 		{
 			type: 'code',
 			lang: 'typescript',
-			caption: '`bff/src/routes/account.ts` (Node BFF) and the order service handler it calls.',
+			caption: '`bff/src/routes/account.ts` (Node [[bff|BFF]]) and the order service handler it calls.',
 			code: `// BFF
 const res = await fetch(\`\${ORDERS_URL}/orders?customer=\${session.customerId}\`);
 const orders = await res.json();          // [{ "id": 9007199254740993, "total": 129.00, ... }]
@@ -308,18 +308,18 @@ func getOrder(w http.ResponseWriter, r *http.Request) {
 					'3 · wrong order shown',
 					'**Bug, SEV-1 privacy incident**',
 					'Order ids are 64-bit; `res.json()` parses them as JS numbers, which are exact only up to 2^53 ([[json-number-precision]]). `9007199254740993` becomes `…992`, a *different real order*. Then the order service returns any order by id with **no ownership check**, so the rounding error became a data exposure.',
-					'Add the ownership check now (`WHERE id = $1 AND customer_id = $2`); serialize ids as strings end to end. Treat as a [[personal-data-breach]]: find every rounded id served (ids > 2^53 in access logs), notify DPO.'
+					'Add the ownership check now (`WHERE id = $1 AND customer_id = $2`); serialize ids as strings end to end. Treat as a [[personal-data-breach]]: find every rounded id served (ids > 2^53 in access logs), notify [[data-protection-officer|DPO]].'
 				],
 				[
 					'1 · revenue changed',
 					'**Expected, but presented as final**',
-					'The stream uses event time with a 2-min [[watermark]]. Mobile clients that were offline Monday night uploaded orders Tuesday morning (*offline-queue flush* spikes 09:00–12:00); they are [[late-arriving-data|late]] for Monday\'s windows and are emitted as corrections. +€17,582 = +1.37%.',
+					'The stream uses [[windowing|event time]] with a 2-min [[watermark]]. Mobile clients that were offline Monday night uploaded orders Tuesday morning (*offline-queue flush* spikes 09:00–12:00); they are [[late-arriving-data|late]] for Monday\'s windows and are emitted as corrections. +€17,582 = +1.37%.',
 					'Don\'t pull board numbers from a live, correcting stream. Publish "provisional" until a close time (e.g. T+24 h), then freeze, and reconcile against the payments ledger.'
 				],
 				[
 					'2 · 395 buyers missing',
 					'**Not a bug**',
-					'Unique buyers is a [[hyperloglog]] with p=14 (16,384 registers): standard error 1.04/√16384 ≈ 0.81%. 41,612 vs 42,007 is −0.94%, about 1.2 standard errors: well inside normal.',
+					'Unique buyers is a [[hyperloglog]] with p=14 (16,384 registers): [[statistical-significance|standard error]] 1.04/√16384 ≈ 0.81%. 41,612 vs 42,007 is −0.94%, about 1.2 standard errors: well inside normal.',
 					'Label the tile "≈" with its error band; use exact `COUNT(DISTINCT)` from the warehouse for anything that goes to the board.'
 				]
 			]
@@ -328,7 +328,7 @@ func getOrder(w http.ResponseWriter, r *http.Request) {
 			type: 'callout',
 			tone: 'warn',
 			title: 'How each could fool you',
-			text: 'The precision bug *looks* like a caching or session mix-up ("they saw someone else\'s data!") and sends people to the CDN. The giveaway is "ends in …992 vs …993": adjacent ids are what float rounding produces. The revenue drift *looks* like double counting; the timing (09:00–12:00, matching mobile flushes) and "corrections" counter say late data. The HLL gap *looks* like a dedup bug; the arithmetic says otherwise, and a real bug would usually be larger and one-directional over time.'
+			text: 'The precision bug *looks* like a caching or session mix-up ("they saw someone else\'s data!") and sends people to the [[cdn|CDN]]. The giveaway is "ends in …992 vs …993": adjacent ids are what float rounding produces. The revenue drift *looks* like double counting; the timing (09:00–12:00, matching mobile flushes) and "corrections" counter say late data. The HLL gap *looks* like a dedup bug; the arithmetic says otherwise, and a real bug would usually be larger and one-directional over time.'
 		},
 		{
 			type: 'p',
@@ -448,8 +448,8 @@ def redact_pii(text: str) -> str:
 					confirm: 'Two `issue_refund` spans in attempt 1, distinct refund ids.'
 				},
 				{
-					title: '[[redos|ReDoS]] in the PII regex froze the worker; redelivery re-ran the whole job.',
-					body: '`([a-zA-Z0-9]+[._-]?)*[a-zA-Z0-9]+@` has nested quantifiers with optional separators: on 64 `a`s followed by `!` (no `@`), the backtracking engine tries exponentially many ways to split the run before failing. The reply quoted the contact line, so `redact_pii` pinned a CPU. After 45 s SQS made the message visible again, a second worker picked it up, **ran the agent again** (2 more refunds = 4 total) and hung on the same regex. Each redelivery pinned another worker until all 4 were stuck: queue age climbs from 10:17.',
+					title: '[[redos|ReDoS]] in the [[pii-redaction|PII]] regex froze the worker; redelivery re-ran the whole job.',
+					body: '`([a-zA-Z0-9]+[._-]?)*[a-zA-Z0-9]+@` has nested quantifiers with optional separators: on 64 `a`s followed by `!` (no `@`), the backtracking engine tries exponentially many ways to split the run before failing. The reply quoted the contact line, so `redact_pii` pinned a CPU. After 45 s [[amazon-sqs|SQS]] made the message visible again, a second worker picked it up, **ran the agent again** (2 more refunds = 4 total) and hung on the same regex. Each redelivery pinned another worker until all 4 were stuck: [[queue-age|queue age]] climbs from 10:17.',
 					confirm: 'Time `EMAIL.search("a"*30 + "!")` vs `"a"*40 + "!"`: it grows explosively. Workers-busy steps 1→4 one per ~45 s.'
 				}
 			]
@@ -474,8 +474,8 @@ def redact_pii(text: str) -> str:
 				],
 				[
 					'Job pipeline',
-					'Kill stuck workers, move #88412 to a DLQ.',
-					'Make the job idempotent: persist "agent completed, refunds = [ids]" before post-processing so redelivery resumes instead of re-running the agent. Visibility timeout > worst-case runtime, with heartbeat extension.'
+					'Kill stuck workers, move #88412 to a [[dead-letter-queue|DLQ]].',
+					'Make the job idempotent: persist "agent completed, refunds = [ids]" before post-processing so redelivery resumes instead of re-running the agent. [[visibility-timeout|Visibility timeout]] > worst-case runtime, with heartbeat extension.'
 				],
 				[
 					'Regex',
@@ -501,7 +501,7 @@ const g4q: Question = {
 	prompt: [
 		{
 			type: 'p',
-			text: 'Postgres, two nodes in two data centres, async replication. A home-grown failover daemon runs on each node. At 14:10 support reports customers "missing" orders they can see in confirmation emails. Duplicate-key errors started appearing in replication logs at 14:11.'
+			text: 'Postgres, two nodes in two data centres, [[replication|async replication]]. A home-grown failover daemon runs on each node. At 14:10 support reports customers "missing" orders they can see in confirmation emails. Duplicate-key errors started appearing in replication logs at 14:11.'
 		},
 		{
 			type: 'code',
@@ -569,7 +569,7 @@ on_promote:
 	answer: [
 		{
 			type: 'p',
-			text: '**[[split-brain|Split brain]].** The dc1↔dc2 link failed at 14:02. pg-b could not tell "pg-a is dead" from "I can\'t reach pg-a", so after 10 s it promoted itself. pg-a was alive, still primary, and dc1\'s API servers kept writing to it using a cached primary address (Consul was on the other side of the partition). For seven minutes both nodes accepted writes (*Commits/s by node*: both non-zero 14:02–14:09). Both generated ids from their own sequence, so the same ids now mean different orders: the duplicate-key errors when replication resumed.'
+			text: '**[[split-brain|Split brain]].** The dc1↔dc2 link failed at 14:02. pg-b could not tell "pg-a is dead" from "I can\'t reach pg-a", so after 10 s it promoted itself. pg-a was alive, still primary, and dc1\'s API servers kept writing to it using a cached primary address (Consul was on the other side of the partition). For seven minutes both nodes accepted writes (*Commits/s by node*: both non-zero 14:02–14:09). Both generated ids from their own sequence, so the same ids now mean different orders: the duplicate-key errors when [[logical-replication|logical replication]] resumed.'
 		},
 		{
 			type: 'ranked',
@@ -595,7 +595,7 @@ on_promote:
 		{
 			type: 'list',
 			items: [
-				'Use a consensus-backed manager (Patroni with etcd/Consul quorum across **three** sites, or a managed service) so only a majority side can elect a leader.',
+				'Use a consensus-backed manager ([[leader-election|Patroni]] with etcd/Consul quorum across **three** sites, or a managed service) so only a majority side can elect a leader.',
 				'Fence: the leader must hold a lease from the quorum store; when it can\'t renew, it demotes itself (read-only) before the lease can expire for others. Clients resolve the leader through the quorum store, never a stale cache.',
 				'Decide explicitly between availability and safety: with synchronous replication to a quorum, the minority side stops writing during a partition. For orders, that is the right trade.'
 			]
@@ -608,7 +608,7 @@ on_promote:
 			type: 'list',
 			items: [
 				'Freeze writes to one node (pick pg-b, the Consul-designated primary). Snapshot both.',
-				'Diff rows created/updated on pg-a after 14:02:03 (its WAL position at the partition) vs pg-b. Re-insert pg-a\'s orders into pg-b with **new ids**, keep a mapping, and update anything that referenced the old ids (emails sent, payments metadata).',
+				'Diff rows created/updated on pg-a after 14:02:03 (its [[write-ahead-log|WAL]] position at the partition) vs pg-b. Re-insert pg-a\'s orders into pg-b with **new ids**, keep a mapping, and update anything that referenced the old ids (emails sent, payments metadata).',
 				'Rebuild pg-a as a replica from pg-b. Never "just restart replication" over a fork.'
 			]
 		}
@@ -624,7 +624,7 @@ const g5q: Question = {
 	prompt: [
 		{
 			type: 'p',
-			text: 'Likes are stored per post in a key-value store replicated [[active-active]] across 3 regions with last-writer-wins. Last month a team fixed NTP drift and switched timestamps to a [[hybrid-logical-clock|hybrid logical clock]], but the counts are still low. An audit of one viral post:'
+			text: 'Likes are stored per post in a key-value store replicated [[active-active]] across 3 regions with [[last-writer-wins|last-writer-wins]]. Last month a team fixed NTP drift and switched timestamps to a [[hybrid-logical-clock|hybrid logical clock]], but the counts are still low. An audit of one viral post:'
 		},
 		{
 			type: 'table',
@@ -670,7 +670,7 @@ const g6q: Question = {
 	prompt: [
 		{
 			type: 'p',
-			text: 'The logging/search cluster (6 data nodes, 30 GB heap each) was slow, so the platform team added 3 more data nodes at 10:00. Indexing throughput *dropped*, and search p99 doubled. The index layout: one index per tenant per day, 5 primaries + 1 replica, 90-day retention, ~400 tenants (most tiny).'
+			text: 'The logging/search cluster (6 data nodes, 30 GB heap each) was slow, so the platform team added 3 more data nodes at 10:00. Indexing throughput *dropped*, and search [[percentiles|p99]] doubled. The index layout: one index per tenant per day, 5 [[elasticsearch|primaries]] + 1 replica, 90-day retention, ~400 tenants (most tiny).'
 		},
 		{
 			type: 'dashboard',
@@ -739,7 +739,7 @@ const g6q: Question = {
 				},
 				{
 					title: 'Heap overhead per shard pushes nodes toward GC trouble.',
-					body: 'Heap 78% → 86% as shards land; more GC time means slower everything, including search p99 (which also [[fan-out|fans out]] to more, smaller shards per query).'
+					body: 'Heap 78% → 86% as shards land; more [[gc-pause|GC]] time means slower everything, including search p99 (which also [[fan-out|fans out]] to more, smaller shards per query).'
 				}
 			]
 		},
@@ -786,7 +786,7 @@ def decrypt_ssn(blob: bytes) -> str:
 			items: [
 				{
 					title: 'Confidentiality: plaintexts leak through XOR.',
-					body: 'GCM is a stream cipher underneath: ciphertext = plaintext ⊕ keystream(key, nonce). Same nonce, same keystream. So `c1 ⊕ c2 = ssn1 ⊕ ssn2`. SSNs are short, digit-only and structured; with one known SSN (an attacker\'s own account) every other SSN encrypted in the same process lifetime decrypts by XOR.'
+					body: 'GCM is a stream cipher underneath: ciphertext = plaintext ⊕ keystream(key, nonce). Same nonce, same keystream. So `c1 ⊕ c2 = ssn1 ⊕ ssn2`. SSNs are short, digit-only and structured; with one known SSN (an attacker\'s own account) every other SSN encrypted in the same process lifetime decrypts by [[xor|XOR]].'
 				},
 				{
 					title: 'Integrity: forgeries become possible.',
@@ -807,7 +807,7 @@ def decrypt_ssn(blob: bytes) -> str:
 			items: [
 				'Treat it as a key-compromise-equivalent event for anyone who could read the column (DB users, backups, replicas, analytics exports). Involve security; this is likely reportable depending on exposure.',
 				'Ship a new scheme: fresh random 96-bit nonce **per encryption**, stored alongside the ciphertext (`nonce || ciphertext`), customer id as AAD, key version prefix.',
-				'Generate a **new key** in KMS (the old one is tainted for this data), re-encrypt every row with the new scheme in a backfill, then disable the old key for encryption and later for decryption. Purge or re-encrypt backups on their retention schedule.',
+				'Generate a **new key** in [[kms|KMS]] (the old one is tainted for this data), re-encrypt every row with the new scheme in a backfill, then disable the old key for encryption and later for decryption. Purge or re-encrypt backups on their retention schedule.',
 				'Add a test that encrypts the same plaintext twice and asserts different ciphertexts. It would have caught this on day one.'
 			]
 		}
@@ -933,8 +933,8 @@ const g8q: Question = {
 			items: [
 				{
 					title: 'The export\'s S3 traffic goes through the NAT gateway.',
-					body: 'There is no [[vpc-gateway-endpoint|S3 gateway endpoint]] on the private route table, so 64 workers × parallel ranged GETs became tens of thousands of connections through nat-0a1 (*BytesIn* 0.4 → 4.6 GB/min at 00:58; *ActiveConnectionCount* climbing from 21k to the ~55k ceiling by 01:10, exactly when `ErrorPortAllocation` starts). A NAT gateway can hold roughly 55,000 simultaneous connections to a single destination IP:port; S3 resolves to few IPs, so the limit is hit fast.',
-					confirm: 'VPC route table for the 1a private subnet: no `pl-…` S3 prefix list route.'
+					body: 'There is no [[vpc-gateway-endpoint|S3 gateway endpoint]] on the private route table, so 64 workers × parallel ranged GETs became tens of thousands of connections through nat-0a1 (*BytesIn* 0.4 → 4.6 GB/min at 00:58; *ActiveConnectionCount* climbing from 21k to the ~55k ceiling by 01:10, exactly when `ErrorPortAllocation` starts). A [[nat-gateway|NAT gateway]] can hold roughly 55,000 simultaneous connections to a single destination IP:port; S3 resolves to few IPs, so the limit is hit fast.',
+					confirm: '[[vpc|VPC]] route table for the 1a private subnet: no `pl-…` S3 prefix list route.'
 				},
 				{
 					title: 'Checkout in the same AZ shares that NAT, so payments fail too.',
@@ -976,7 +976,7 @@ const g9q: Question = {
 				['Worker slots per pod', '32'],
 				['Target utilization (latency-sensitive)', '65%'],
 				['Zones', '3; must survive losing one at peak'],
-				['DB connections per pod', '10 (pool)'],
+				['[[connection-pool|DB connections]] per pod', '10 (pool)'],
 				['DB max_connections', '2,000'],
 				['Pod cost', '$0.09/h'],
 				['Deploy strategy', 'maxSurge 25%']
@@ -989,7 +989,7 @@ const g9q: Question = {
 			head: ['Step', 'Arithmetic', 'Result'],
 			rows: [
 				['Concurrency ([[littles-law]])', '18,000 × 0.080 s', '**1,440** slots busy on average'],
-				['Pods at 65%', '1,440 ÷ (32 × 0.65) = 69.2', '**70** pods'],
+				['[[kubernetes|Pods]] at 65%', '1,440 ÷ (32 × 0.65) = 69.2', '**70** pods'],
 				['Survive a zone loss', '70 must fit in 2 zones → 35 per zone × 3', '**105** pods'],
 				['DB connections', '105 × 10 = 1,050; with 25% surge: 132 × 10 = 1,320', 'fits 2,000 ✓'],
 				['Cost at peak', '105 × $0.09 × 24 h', '**$226.80/day** (vs $151.20 for 70 pods)']
@@ -1022,7 +1022,7 @@ const d1q: Question = {
 	prompt: [
 		{
 			type: 'p',
-			text: 'Your API runs in 4 regions. Contracts say each customer gets **1,000 req/s globally**, enforced within ±5%. Customers are often multi-region (their own fleets call the nearest region). P99 budget for the limiter: **2 ms**. Cross-region RTT: 80–150 ms.'
+			text: 'Your API runs in 4 regions. Contracts say each customer gets **1,000 req/s globally**, enforced within ±5%. Customers are often multi-region (their own fleets call the nearest region). P99 budget for the limiter: **2 ms**. Cross-region [[rtt|RTT]]: 80–150 ms.'
 		},
 		{
 			type: 'p',
@@ -1038,7 +1038,7 @@ const d1q: Question = {
 			type: 'table',
 			head: ['Option', 'Latency', 'Accuracy', 'Failure mode'],
 			rows: [
-				['Central Redis', '80–150 ms', 'Exact', 'Region partition → limiter down → fail open (no limit) or closed (outage)'],
+				['Central Redis', '80–150 ms', 'Exact', 'Region partition → limiter down → [[fail-open-closed|fail open]] (no limit) or closed (outage)'],
 				['Independent per-region buckets', '<1 ms', '4× over', 'Contract breach for multi-region customers'],
 				['Static split (250/region)', '<1 ms', 'Under-serves', 'A customer whose traffic is 90% in one region is throttled at 25% of their contract'],
 				['**[[quota-leasing|Quota leasing]]** (adaptive split)', '<1 ms', '±few %', 'Partition: regions keep last lease, decay to static split']
@@ -1096,7 +1096,7 @@ const d2q: Question = {
 				'**Intent first:** persist the attempt with a unique id *before* calling the provider ([[transactional-outbox|outbox]] style), so a crash leaves a record to resolve.',
 				'**Use the provider\'s searchable field as your key:** `merchant_ref = attempt_id`. It doesn\'t dedupe for you, but it makes the outcome *discoverable*.',
 				'**UNKNOWN is a state, not an error.** A resolver waits past the 60 s consistency window, then queries by `merchant_ref`. Found → CAPTURED. Not found after N checks over ~10 min → safe to mark FAILED and allow a *new* attempt with a new id.',
-				'**Never two attempts in flight per order:** a unique partial index `(order_id) WHERE state IN (PENDING, UNKNOWN)` makes a concurrent retry fail at the database.',
+				'**Never two attempts in flight per order:** a unique [[partial-index|partial index]] `(order_id) WHERE state IN (PENDING, UNKNOWN)` makes a concurrent retry fail at the database.',
 				'**Daily [[reconciliation]]** against the provider\'s settlement file catches anything the resolver misjudged: refund duplicates, flag missing.',
 				'**UX:** the user sees "payment processing, we\'ll email you" for UNKNOWN instead of a "try again" button that causes the double charge.'
 			]
@@ -1112,7 +1112,7 @@ const d3q: Question = {
 	prompt: [
 		{
 			type: 'p',
-			text: 'A mobile game wants a global top-100 that updates "live" (within ~2 s). 50 million players, 200,000 score updates/s at peak, scores only increase within a season. The obvious design is one Redis sorted set (`ZADD` + `ZREVRANGE 0 99`). What breaks, and what do you build?'
+			text: 'A mobile game wants a global top-100 that updates "live" (within ~2 s). 50 million players, 200,000 score updates/s at peak, scores only increase within a season. The obvious design is one [[redis|Redis]] sorted set (`ZADD` + `ZREVRANGE 0 99`). What breaks, and what do you build?'
 		}
 	],
 	answer: [
@@ -1145,7 +1145,7 @@ const d4q: Question = {
 	prompt: [
 		{
 			type: 'p',
-			text: 'A regulatory notice must go to 2.3 M customers. Legal\'s requirement, verbatim: "Every customer receives it exactly once. Not zero. Not twice." The email provider\'s API returns 202 and may time out. Your pipeline is queue-based with [[at-least-once]] delivery. Respond to the requirement and design the send.'
+			text: 'A regulatory notice must go to 2.3 M customers. Legal\'s requirement, verbatim: "Every customer receives it [[exactly-once|exactly once]]. Not zero. Not twice." The email provider\'s API returns 202 and may time out. Your pipeline is queue-based with [[at-least-once]] delivery. Respond to the requirement and design the send.'
 		}
 	],
 	answer: [
@@ -1159,7 +1159,7 @@ const d4q: Question = {
 				'**Restate for legal:** "Each customer gets at least one copy; duplicates are extremely rare and harmless; we can show proof of send for every customer."',
 				'**Dedupe where the duplicate would be created:** a `notice_sends(customer_id PK, status, provider_message_id)` table; insert `PENDING` before calling the provider, so redelivered jobs see the row.',
 				'**Use the provider\'s idempotency / custom message-id header** if it has one; otherwise, on timeout, query the provider\'s message log by your custom id before re-sending.',
-				'**Evidence:** store provider message ids and delivery/bounce webhooks; produce a report of customers with no `delivered` event for follow-up via another channel (letter, in-app).',
+				'**Evidence:** store provider message ids and delivery/bounce [[webhook|webhooks]]; produce a report of customers with no `delivered` event for follow-up via another channel (letter, in-app).',
 				'**Throttle:** 2.3 M at once will hit provider rate limits and spam heuristics; schedule over hours with warm-up per sending domain.'
 			]
 		}
@@ -1177,7 +1177,7 @@ const lab1q: Question = {
 		{ type: 'p', text: 'Run the incident in the console below. You can pause at any time; the clock starts on your first change.' },
 		{ type: 'lab', lab: regionEvacuation }
 	],
-	hints: ['How long does a new instance take to serve traffic, and how long does DNS take to move clients?', 'Watch "eu-central-1 utilization" before you touch DNS.'],
+	hints: ['How long does a new instance take to serve traffic, and how long does [[dns-ttl|DNS]] take to move clients?', 'Watch "eu-central-1 utilization" before you touch DNS.'],
 	answer: [
 		{
 			type: 'p',
@@ -1228,7 +1228,7 @@ const lab2q: Question = {
 			type: 'callout',
 			tone: 'warn',
 			title: 'The clock is part of the puzzle',
-			text: 'Doing nothing also loses: v1 keeps evicting as the working set grows, and DB CPU creeps toward 100%. You can\'t wait for a quiet hour. And **FLUSHALL on v1** "to stop evictions" is the fastest way to lose: it empties the cache that is currently absorbing ~90% of reads.'
+			text: 'Doing nothing also loses: v1 keeps [[eviction|evicting]] as the working set grows, and DB CPU creeps toward 100%. You can\'t wait for a quiet hour. And **FLUSHALL on v1** "to stop evictions" is the fastest way to lose: it empties the cache that is currently absorbing ~90% of reads.'
 		}
 	]
 };
@@ -1244,7 +1244,7 @@ const c1q: Question = {
 	prompt: [
 		{
 			type: 'p',
-			text: 'Tumbling windows of 60 s, summed per key. [[watermark|Watermark]] = max event time seen − allowed lateness (10 s). A window `[s, s+60)` is emitted when the watermark reaches `s+60`. An event whose window was already emitted is **late**: set aside, not counted. Events arrive in this order `(event_time, key, amount)`. Fill in the watermark after each event, what gets emitted, and which events are late.'
+			text: '[[windowing|Tumbling windows]] of 60 s, summed per key. [[watermark|Watermark]] = max event time seen − allowed lateness (10 s). A window `[s, s+60)` is emitted when the watermark reaches `s+60`. An event whose window was already emitted is **late**: set aside, not counted. Events arrive in this order `(event_time, key, amount)`. Fill in the watermark after each event, what gets emitted, and which events are late.'
 		},
 		{
 			type: 'code',
@@ -1500,7 +1500,7 @@ const c4q: Question = {
 	answer: [
 		{
 			type: 'p',
-			text: '**The watermark goes backwards, so closed windows reopen.** After event 5 (t=75) window 0 is emitted with `a=18`. Event 6 (t=59) sets the watermark to 49 and, with no lateness check, *recreates* window 0 with `b=4`. Event 7 (t=70) moves it to 60 and window 0 is emitted **again**, as `(0, b, 4)`. Same with event 9: `[60,120)` reappears and `a=8` is emitted a second time at flush. On the warm-up stream it produces six results instead of four: two for window 0 and two `a` rows for window 60.'
+			text: '**The [[watermark|watermark]] goes backwards, so closed windows reopen.** After event 5 (t=75) window 0 is emitted with `a=18`. Event 6 (t=59) sets the watermark to 49 and, with no lateness check, *recreates* window 0 with `b=4`. Event 7 (t=70) moves it to 60 and window 0 is emitted **again**, as `(0, b, 4)`. Same with event 9: `[60,120)` reappears and `a=8` is emitted a second time at flush. On the warm-up stream it produces six results instead of four: two for window 0 and two `a` rows for window 60.'
 		},
 		{
 			type: 'p',

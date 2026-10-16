@@ -36,14 +36,14 @@ const k1: Question = {
 	answer: [
 		{
 			type: 'p',
-			text: '**The tempting move**: the [[cluster-autoscaler]] "isn\'t working", so add nodes yourself in zone b where spot capacity exists. Nodes come up, sit idle, the bill rises, and the three pods stay Pending.'
+			text: '**The tempting move**: the [[cluster-autoscaler]] "isn\'t working", so add nodes yourself in zone b where [[spot-instance|spot]] capacity exists. Nodes come up, sit idle, the bill rises, and the three pods stay Pending.'
 		},
 		{
 			type: 'ranked',
 			items: [
 				{
 					title: 'Read the scheduling message: `volume node affinity conflict`.',
-					body: 'search-0/3/6 own EBS volumes in eu-west-1a. A [[persistent-volume-claim|PVC]] pins its pod to the disk\'s zone, so only zone-a capacity helps ([[volume-node-affinity]]).'
+					body: 'search-0/3/6 own [[ebs|EBS volumes]] in eu-west-1a. A [[persistent-volume-claim|PVC]] pins its pod to the disk\'s zone, so only zone-a capacity helps ([[volume-node-affinity]]).'
 				},
 				{
 					title: 'Read why zone a isn\'t growing: `InsufficientInstanceCapacity (spot, m6i.4xlarge, eu-west-1a)`.',
@@ -63,7 +63,7 @@ const k1: Question = {
 		},
 		{
 			type: 'p',
-			text: '**Prevent:** don\'t run single-instance-type spot pools for stateful workloads; set a capacity-rebalance / mixed-instances policy; spread replicas so each shard\'s copies live in different zones *and* different capacity pools.'
+			text: '**Prevent:** don\'t run single-instance-type spot pools for stateful workloads; set a capacity-rebalance / [[auto-scaling-group|mixed-instances policy]]; spread replicas so each shard\'s copies live in different [[availability-zone|zones]] *and* different capacity pools.'
 		}
 	]
 };
@@ -79,7 +79,7 @@ const k2: Question = {
 	answer: [
 		{
 			type: 'p',
-			text: '**What\'s happening:** `minAvailable: 2` with 2 replicas means `disruptionsAllowed = 0`. The eviction API refuses; the drain retries every 5 s until the window closes, and then the provider force-drains, taking both pods at once. Waiting is not neutral: it ends in the worst outcome.'
+			text: '**What\'s happening:** `minAvailable: 2` with 2 replicas means `disruptionsAllowed = 0`. The [[eviction|eviction API]] refuses; the drain retries every 5 s until the window closes, and then the provider force-drains, taking both pods at once. Waiting is not neutral: it ends in the worst outcome.'
 		},
 		{
 			type: 'table',
@@ -225,7 +225,7 @@ const k5: Question = {
 	prompt: [
 		{
 			type: 'p',
-			text: 'Since a traffic increase, ~2% of calls from `payments` to `api.partner-bank.com` take 5.0–5.1 s, a few take 10 s. Calls to in-cluster services (`ledger.payments`) are fine. The partner says their p99 is 80 ms. Someone proposes scaling CoreDNS from 2 to 10 replicas.'
+			text: 'Since a traffic increase, ~2% of calls from `payments` to `api.partner-bank.com` take 5.0–5.1 s, a few take 10 s. Calls to in-cluster services (`ledger.payments`) are fine. The partner says their [[percentiles|p99]] is 80 ms. Someone proposes scaling CoreDNS from 2 to 10 replicas.'
 		},
 		{
 			type: 'trace',
@@ -256,7 +256,7 @@ cpu=0 ... insert_failed=1834 ...`
 	answer: [
 		{
 			type: 'p',
-			text: '**The 5 s is a resolver timeout, not latency.** With `ndots:5`, `api.partner-bank.com` (2 dots) is tried with every search domain first: 4 failing names × (A + AAAA) + the real one = up to 10 queries ([[ndots]]). glibc sends A and AAAA in parallel over one UDP socket; under load the node\'s conntrack table races (`insert_failed` climbing) and drops one, and the resolver waits its full 5 s timeout. Two drops = 10 s.'
+			text: '**The 5 s is a resolver timeout, not latency.** With `ndots:5`, `api.partner-bank.com` (2 dots) is tried with every search domain first: 4 failing names × (A + AAAA) + the real one = up to 10 queries ([[ndots]]). glibc sends A and AAAA in parallel over one UDP socket; under load the node\'s [[conntrack|conntrack]] table races (`insert_failed` climbing) and drops one, and the resolver waits its full 5 s timeout. Two drops = 10 s.'
 		},
 		{
 			type: 'p',
@@ -273,7 +273,7 @@ cpu=0 ... insert_failed=1834 ...`
 			items: [
 				'**Now:** use the FQDN with a trailing dot (`api.partner-bank.com.`) in config, or set `dnsConfig.options ndots: "2"` on `payments`.',
 				'**Properly:** NodeLocal DNSCache (TCP to upstream, no conntrack race), `single-request-reopen` where glibc is used, and cache resolved partner addresses in the HTTP client ([[dns-caching]]).',
-				'**Verify:** the slow-sample rate should go to ~0, and DNS queries per payout from ~10 to 2.'
+				'**Verify:** the slow-sample rate should go to ~0, and [[dns|DNS]] queries per payout from ~10 to 2.'
 			]
 		}
 	]
@@ -317,7 +317,7 @@ const k6: Question = {
 		{
 			type: 'list',
 			items: [
-				'**Now:** mirror the image into your private registry (or a pull-through cache) and point the sidecar injector at it; or authenticate pulls.',
+				'**Now:** mirror the image into your private registry (or a pull-through cache) and point the [[service-mesh|sidecar injector]] at it; or authenticate pulls.',
 				'**Properly:** policy that bans public-registry images in prod manifests, pin images by digest ([[image-digest]]), and bake common images into the node AMI so scale-outs don\'t depend on the internet at all.'
 			]
 		}
@@ -354,7 +354,7 @@ const k7: Question = {
 	answer: [
 		{
 			type: 'p',
-			text: '**Env vars are read at container start.** `envFrom` copies the ConfigMap into the environment once; editing the ConfigMap never touches running containers. The ~40% of pods that enforce 1200 are exactly the **8 created by HPA scale-ups after 10:00** (12 → 20). The original 12 still run with 600 ([[configmap-reload]]).'
+			text: '**Env vars are read at container start.** `envFrom` copies the ConfigMap into the environment once; editing the ConfigMap never touches running containers. The ~40% of pods that enforce 1200 are exactly the **8 created by [[horizontal-pod-autoscaler|HPA]] scale-ups after 10:00** (12 → 20). The original 12 still run with 600 ([[configmap-reload]]).'
 		},
 		{
 			type: 'p',
@@ -363,7 +363,7 @@ const k7: Question = {
 		{
 			type: 'list',
 			items: [
-				'**Now:** `kubectl rollout restart deploy/gateway` (staged, respecting the PDB).',
+				'**Now:** `kubectl rollout restart deploy/gateway` (staged, respecting the [[pod-disruption-budget|PDB]]).',
 				'**Properly:** a `checksum/config` annotation computed from the ConfigMap in the pod template (Helm/Kustomize), so config changes roll out like code; or immutable, versioned ConfigMaps (`gateway-config-v7`) referenced by the Deployment, so a rollback restores the old config too.'
 			]
 		}
@@ -399,14 +399,14 @@ const k8: Question = {
 	answer: [
 		{
 			type: 'p',
-			text: '**The autoscaler\'s template of `gpu-ng` is wrong.** A group at 0 nodes has no live node to copy, so the [[cluster-autoscaler]] builds a template from the node group\'s tags. The real GPU nodes get a `nvidia.com/gpu` taint at boot (from the device plugin / user data), but the group isn\'t tagged with it, so the autoscaler simulates "an API pod fits on a GPU node", buys three, and then the scheduler (which sees the real taint) refuses to place the pod.'
+			text: '**The autoscaler\'s template of `gpu-ng` is wrong.** A group at 0 nodes has no live node to copy, so the [[cluster-autoscaler]] builds a template from the node group\'s tags. The real GPU nodes get a `nvidia.com/gpu` [[taints-tolerations|taint]] at boot (from the device plugin / user data), but the group isn\'t tagged with it, so the autoscaler simulates "an API pod fits on a GPU node", buys three, and then the scheduler (which sees the real taint) refuses to place the pod.'
 		},
 		{
 			type: 'ranked',
 			items: [
 				{
 					title: 'Declare the taint (and labels) on the node group template.',
-					body: 'e.g. ASG tag `k8s.io/cluster-autoscaler/node-template/taint/nvidia.com/gpu: present:NoSchedule`. Now the simulation matches reality and gpu-ng is never chosen for API pods.'
+					body: 'e.g. [[auto-scaling-group|ASG]] tag `k8s.io/cluster-autoscaler/node-template/taint/nvidia.com/gpu: present:NoSchedule`. Now the simulation matches reality and gpu-ng is never chosen for API pods.'
 				},
 				{
 					title: 'Then fix the actual shortage: general-ng is at max.',
@@ -449,7 +449,7 @@ $ kubectl get pods -o jsonpath='{..imageID}' | sort | uniq -c
 	answer: [
 		{
 			type: 'p',
-			text: '**The manifest didn\'t change; the tag did.** `checkout:stable` is a movable pointer, and the promote job moved it to v2.14 this morning. Re-applying yesterday\'s YAML pulls whatever `stable` means *now*: the broken build. Every pod reports digest `9c07…` ([[image-digest]]).'
+			text: '**The manifest didn\'t change; the tag did.** `checkout:stable` is a [[mutable-image-tag|movable pointer]], and the promote job moved it to v2.14 this morning. Re-applying yesterday\'s YAML pulls whatever `stable` means *now*: the broken build. Every pod reports digest `9c07…` ([[image-digest]]).'
 		},
 		{
 			type: 'list',
@@ -538,7 +538,7 @@ jobs:
 	answer: [
 		{
 			type: 'p',
-			text: '**Cache poisoning through a shared, persistent runner** ([[ci-cache-poisoning]]). A fork PR\'s build runs arbitrary code (`npm ci` runs install scripts; the PR can change `package.json` and the build itself) on the same machine that later builds the release. It can write into `~/.npm`, leave a modified package in the cache, or plant a Docker layer. The release job then restores it with `--prefer-offline` and publishes it: reviewed source, unreviewed artifact.'
+			text: '**Cache poisoning through a shared, persistent runner** ([[ci-cache-poisoning]]). A fork PR\'s build runs arbitrary code (`npm ci` runs [[npm-lifecycle-scripts|install scripts]]; the PR can change `package.json` and the build itself) on the same machine that later builds the release. It can write into `~/.npm`, leave a modified package in the cache, or plant a Docker layer. The release job then restores it with `--prefer-offline` and publishes it: reviewed source, unreviewed artifact.'
 		},
 		{
 			type: 'p',
@@ -548,7 +548,7 @@ jobs:
 			type: 'list',
 			items: [
 				'**Now:** unpublish/deprecate 3.2.0, rotate `NPM_TOKEN` and every secret those runners could read, rebuild from a clean environment, notify customers.',
-				'**Properly:** ephemeral runners (fresh VM per job); never run untrusted PRs on runners that touch release credentials; scope caches by trust (fork PRs read-only at most); `npm ci --ignore-scripts` where possible; build provenance (SLSA attestation) and a reproducible-build check that compares the artifact to a clean build before publish.'
+				'**Properly:** ephemeral runners (fresh VM per job); never run untrusted PRs on runners that touch release credentials; scope caches by trust (fork PRs read-only at most); `npm ci --ignore-scripts` where possible; build provenance ([[slsa|SLSA]] attestation) and a reproducible-build check that compares the artifact to a clean build before publish.'
 			]
 		}
 	]
@@ -591,7 +591,7 @@ const r4: Question = {
 	answer: [
 		{
 			type: 'p',
-			text: '**The canary had no statistical power for the change it was testing** ([[canary-analysis]]). 5% × 0.3% × 400 req/s × 1,800 s ≈ **108 coupon requests**. 23 of them failed (21%), a catastrophic regression, but diluted into 36,000 canary requests it shifts the overall error rate by **+0.06 pp**, well inside the 0.2 pp gate.'
+			text: '**The canary had no [[statistical-significance|statistical power]] for the change it was testing** ([[canary-analysis]]). 5% × 0.3% × 400 req/s × 1,800 s ≈ **108 coupon requests**. 23 of them failed (21%), a catastrophic regression, but diluted into 36,000 canary requests it shifts the overall error rate by **+0.06 [[percentage-points|pp]]**, well inside the 0.2 pp gate.'
 		},
 		{
 			type: 'ranked',
@@ -632,7 +632,7 @@ LINE 1: SELECT id, status, legacy_status FROM orders WHERE ...`
 		{
 			type: 'list',
 			items: [
-				'**Now:** roll **forward**: hotfix v41\'s bug, or re-add the column (nullable) so v40 boots, then decide. Recovering dropped data needs a restore/PITR, which you should avoid if the data was truly unused.',
+				'**Now:** roll **forward**: hotfix v41\'s bug, or re-add the column (nullable) so v40 boots, then decide. Recovering dropped data needs a restore/[[pitr|PITR]], which you should avoid if the data was truly unused.',
 				'**Properly:** a CI check that runs version N\'s test suite against N+1\'s schema (proves rollback compatibility); destructive migrations require a separate, later release; ORMs that select `*` explicitly listed columns make drops even riskier.'
 			]
 		}
@@ -686,7 +686,7 @@ const r7: Question = {
 	prompt: [
 		{
 			type: 'p',
-			text: 'A product manager archived 40 "stale" flags in the flag dashboard on Friday. Since then, a handful of EU customers see a new tax calculation that was abandoned in 2024. No deploy happened.'
+			text: 'A product manager archived 40 "stale" [[feature-flag|flags]] in the flag dashboard on Friday. Since then, a handful of EU customers see a new tax calculation that was abandoned in 2024. No deploy happened.'
 		},
 		{
 			type: 'code',
@@ -756,13 +756,13 @@ const i1: Question = {
 		},
 		{
 			type: 'p',
-			text: '**The winning sequence:** switch to **alternating users** (two valid credentials) → rotate (new user becomes current; old still valid) → set `maxUnavailable` to ~10% → rollout restart → wait until zero pods use the previous credential → **then** revoke it.'
+			text: '**The winning sequence:** switch to **[[dual-credential-rotation|alternating users]]** (two valid credentials) → rotate (new user becomes current; old still valid) → set `maxUnavailable` to ~10% → rollout restart → wait until zero pods use the previous credential → **then** revoke it.'
 		},
 		{
 			type: 'callout',
 			tone: 'info',
 			title: 'Long-term',
-			text: 'Make rotation a non-event: short-lived DB credentials (IAM auth / dynamic secrets), clients that reload credentials without restarting, and a connection pooler (PgBouncer/RDS Proxy) so a fleet restart doesn\'t mean hundreds of fresh logins.'
+			text: 'Make rotation a non-event: short-lived DB credentials (IAM auth / dynamic secrets), clients that reload credentials without restarting, and a connection pooler ([[pgbouncer|PgBouncer]]/RDS Proxy) so a fleet restart doesn\'t mean hundreds of fresh logins.'
 		}
 	]
 };
@@ -776,7 +776,7 @@ const i2: Question = {
 	prompt: [
 		{
 			type: 'p',
-			text: 'A PR titled "refactor: move RDS into module, enable encryption" has this plan. The author notes "the destroy is just Terraform being weird about modules, it\'ll recreate it". You\'re the approver.'
+			text: 'A PR titled "refactor: move [[amazon-rds|RDS]] into module, enable encryption" has this plan. The author notes "the destroy is just Terraform being weird about modules, it\'ll recreate it". You\'re the approver.'
 		},
 		{
 			type: 'code',
@@ -825,7 +825,7 @@ Plan: 1 to add, 0 to change, 1 to destroy.`
 			items: [
 				'Split the PR: (1) refactor with `moved` → plan must say **0 to destroy**; (2) encryption as a planned migration.',
 				'Add `lifecycle { prevent_destroy = true }` to stateful resources and a CI policy that fails any plan deleting a resource tagged `data=critical`.',
-				'Never "get around it" with `-target`; it applies part of the plan and leaves code and state disagreeing.'
+				'Never "get around it" with [[terraform-target|-target]]; it applies part of the plan and leaves code and state disagreeing.'
 			]
 		}
 	]
@@ -886,7 +886,7 @@ const i4: Question = {
 	answer: [
 		{
 			type: 'p',
-			text: '**Configuration drift being "corrected" back** ([[config-drift]]). The console fix (an inbound security-group rule for the partner\'s new IPs) never made it into code. Every Thursday\'s apply sees a difference from the declared state and removes it: Terraform is doing exactly its job. The "1 to change" line was the outage, approved weekly.'
+			text: '**Configuration drift being "corrected" back** ([[config-drift]]). The console fix (an inbound [[security-group|security-group rule]] for the partner\'s new IPs) never made it into code. Every Thursday\'s apply sees a difference from the declared state and removes it: Terraform is doing exactly its job. The "1 to change" line was the outage, approved weekly.'
 		},
 		{
 			type: 'list',
@@ -911,7 +911,7 @@ const s1: Question = {
 	prompt: [
 		{
 			type: 'p',
-			text: 'SLO: 99.9% of API requests succeed over 30 days. Current alert: **error rate > 1% for 5 min → page**. Last month it paged 19 times between 02:00 and 04:00 (traffic ~3 req/s) and didn\'t page at all for a regression that ran at ~0.4% errors for 9 days.'
+			text: '[[slo|SLO]]: 99.9% of API requests succeed over 30 days. Current alert: **error rate > 1% for 5 min → page**. Last month it paged 19 times between 02:00 and 04:00 (traffic ~3 req/s) and didn\'t page at all for a regression that ran at ~0.4% errors for 9 days.'
 		},
 		{
 			type: 'dashboard',
@@ -934,7 +934,7 @@ const s1: Question = {
 	answer: [
 		{
 			type: 'p',
-			text: '**Both failures have the same cause:** a threshold on the instantaneous ratio. At 3 req/s, 5 minutes is ~900 requests; 10 failures = 1.1% → page, statistically meaningless ([[low-traffic-ratio]]). Meanwhile 0.4% is under 1%, so it never fires, yet it is a 4× [[burn-rate]] that blew through the entire budget in 9 days.'
+			text: '**Both failures have the same cause:** a threshold on the instantaneous ratio. At 3 req/s, 5 minutes is ~900 requests; 10 failures = 1.1% → page, statistically meaningless ([[low-traffic-ratio]]). Meanwhile 0.4% is under 1%, so it never fires, yet it is a 4× [[burn-rate]] that blew through the entire [[error-budget|budget]] in 9 days.'
 		},
 		{
 			type: 'table',
@@ -991,7 +991,7 @@ const s2: Question = {
 				['Prevent', 'Prod shells/DB clients get a red prompt and `[PROD]` in the terminal title.', 'Platform · Nov 1'],
 				['Detect', 'Alert when active subscriptions drop > 1% in 10 minutes.', 'Billing team · Nov 4'],
 				['Mitigate', 'Soft-delete subscriptions (`deleted_at`) so a revert is an UPDATE, not a restore.', 'Billing team · Dec 1'],
-				['Mitigate', 'Quarterly timed restore drill of the subscriptions DB; target RTO 30 min, currently 4 h.', 'DBA · first drill Nov 20'],
+				['Mitigate', 'Quarterly timed restore drill of the subscriptions DB; target [[rto-rpo|RTO]] 30 min, currently 4 h.', 'DBA · first drill Nov 20'],
 				['Process', 'Incident roles (commander, comms) + a status-page template; replaces "improve communication".', 'Eng mgmt · Nov 10']
 			]
 		},
@@ -1012,7 +1012,7 @@ const s3: Question = {
 	prompt: [
 		{
 			type: 'p',
-			text: 'Game day: "inject 300 ms latency into `inventory` for 15 minutes; hypothesis: checkout p99 stays < 800 ms". Result: no change at all. The team wants to write "checkout is resilient to inventory latency" in the reliability report. The fault was injected with a mesh VirtualService on subset `v1`.'
+			text: 'Game day: "inject 300 ms latency into `inventory` for 15 minutes; hypothesis: checkout p99 stays < 800 ms". Result: no change at all. The team wants to write "checkout is resilient to inventory latency" in the reliability report. The fault was injected with a mesh [[service-mesh|VirtualService]] on subset `v1`.'
 		},
 		{
 			type: 'dashboard',
@@ -1072,7 +1072,7 @@ const s4: Question = {
 	answer: [
 		{
 			type: 'p',
-			text: '**"Available" isn\'t "usable."** Block-storage snapshot restores are **lazy-loaded**: blocks are fetched from object storage on first read, so a 4 TB database is "available" in minutes and then crawls for hours as every cold block is pulled. That plus WAL replay is the real RTO ([[restore-drill]]).'
+			text: '**"Available" isn\'t "usable."** Block-storage snapshot restores are **[[lazy-snapshot-restore|lazy-loaded]]**: blocks are fetched from object storage on first read, so a 4 TB database is "available" in minutes and then crawls for hours as every cold block is pulled. That plus [[write-ahead-log|WAL replay]] is the real RTO ([[restore-drill]]).'
 		},
 		{
 			type: 'ranked',
@@ -1125,7 +1125,7 @@ const s5: Question = {
 			items: [
 				{
 					title: 'A `user_id` label on a histogram (71% of cost).',
-					body: 'checkout v3.1 added `user_id` to `request_duration_seconds`. Series = routes × statuses × ~12 `le` buckets × users: 0.42 M → 3.9 M series in three days ([[metric-cardinality]], [[telemetry-cost]]). Remove the label; if per-user latency matters, use trace exemplars or logs, not metric labels.'
+					body: 'checkout v3.1 added `user_id` to `request_duration_seconds`. Series = routes × statuses × ~12 `le` [[histogram-metric|buckets]] × users: 0.42 M → 3.9 M series in three days ([[metric-cardinality]], [[telemetry-cost]]). Remove the label; if per-user latency matters, use trace exemplars or logs, not metric labels.'
 				},
 				{
 					title: 'search v8.2 logs +210 GB/day (24%).',
@@ -1190,7 +1190,7 @@ const teasers: Question[] = [
 		id: 't5-cronjob-overlap',
 		title: 'The CronJob that ran twice at once',
 		tag: 'teaser',
-		prompt: [{ type: 'p', text: 'An hourly CronJob usually takes 20 min. During a slow week it took 70 min. What happened at the next hour, by default?' }],
+		prompt: [{ type: 'p', text: 'An hourly [[cron|CronJob]] usually takes 20 min. During a slow week it took 70 min. What happened at the next hour, by default?' }],
 		answer: [
 			{
 				type: 'p',
@@ -1216,7 +1216,7 @@ RUN npm run build`
 		answer: [
 			{
 				type: 'p',
-				text: '`COPY . .` comes before `npm ci`, so any source change invalidates the dependency layer. Copy `package.json` + lockfile, `npm ci`, *then* copy the source. Bonus: add a `.dockerignore` (a local `node_modules` or `.env` copied into the image is a size and secret leak).'
+				text: '`COPY . .` comes before `npm ci`, so any source change invalidates the [[docker-layer-caching|dependency layer]]. Copy `package.json` + lockfile, `npm ci`, *then* copy the source. Bonus: add a `.dockerignore` (a local `node_modules` or `.env` copied into the image is a size and secret leak).'
 			}
 		]
 	},
