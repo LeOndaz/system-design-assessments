@@ -27,6 +27,7 @@
 	<header class="hero">
 		<h1>{t.term}</h1>
 		{#if t.aliases?.length}<p class="aliases">also: {t.aliases.join(' · ')}</p>{/if}
+		{#if t.wiki}<p class="aliases"><a href={t.wiki} target="_blank" rel="noreferrer">Read more on Wikipedia ↗</a></p>{/if}
 		<p class="short"><Rich text={t.short} /></p>
 		{#if t.analogy}
 			<aside class="analogy"><span class="lbl">Think of it as</span> <Rich text={t.analogy} /></aside>

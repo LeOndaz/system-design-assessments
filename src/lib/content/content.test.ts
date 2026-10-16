@@ -5,8 +5,9 @@
 import { describe, expect, it } from 'vitest';
 import { assessments, glossary } from './index';
 import { termRefs } from './inline';
-import type { Block, Panel, Rich } from './types';
+import type { Block, Lab, MockEl, Panel, Rich } from './types';
 import { richIn } from './walk';
+import { replay } from '$lib/labs/engine';
 
 const termIds = new Set(glossary.map((t) => t.id));
 
@@ -33,6 +34,26 @@ function panelProblems(p: Panel): string[] {
 	return errs;
 }
 
+/** Every lab must be winnable by its reference solution, unwinnable idle, and its trap must not win. */
+function labProblems(lab: Lab): string[] {
+	const errs: string[] = [];
+	const keys = new Set(Object.keys(lab.initial));
+	for (const r of lab.resources) for (const f of r.fields ?? []) if (!keys.has(f.key)) errs.push(`lab "${lab.title}": field ${f.key} not in initial state`);
+	try {
+		const idle = replay(lab, []);
+		if (idle.kind === 'won') errs.push(`lab "${lab.title}": wins with no action`);
+		const sol = replay(lab, lab.solution);
+		if (sol.kind !== 'won') errs.push(`lab "${lab.title}": reference solution does not win (${sol.kind}${sol.kind === 'lost' ? `: ${sol.reason}` : ''})`);
+		if (lab.trap) {
+			const trap = replay(lab, lab.trap);
+			if (trap.kind === 'won') errs.push(`lab "${lab.title}": trap move wins`);
+		}
+	} catch (e) {
+		errs.push(`lab "${lab.title}": simulation threw ${(e as Error).message}`);
+	}
+	return errs;
+}
+
 function blockProblems(blocks: Block[] | undefined): string[] {
 	const errs: string[] = [];
 	for (const b of blocks ?? []) {
@@ -51,6 +72,13 @@ function blockProblems(blocks: Block[] | undefined): string[] {
 				if (r.length !== b.head.length) errs.push(`table row ${i} has ${r.length} cells for ${b.head.length} columns`);
 			});
 		if (b.type === 'columns') for (const c of b.columns) errs.push(...blockProblems(c.blocks));
+		if (b.type === 'lab') errs.push(...labProblems(b.lab));
+		if (b.type === 'mock' && b.mock.mode === 'spot') {
+			const flat: MockEl[] = [];
+			const walk = (els: MockEl[]) => els.forEach((e) => (flat.push(e), e.children && walk(e.children)));
+			walk(b.mock.elements);
+			if (flat.filter((e) => e.issue).length < 3) errs.push(`spot mock "${b.mock.url ?? ''}" needs ≥3 planted issues`);
+		}
 	}
 	return errs;
 }
@@ -74,6 +102,12 @@ describe('glossary', () => {
 			for (const id of t.related ?? []) if (!termIds.has(id)) broken.push(`${t.id} related → ${id}`);
 		}
 		expect(broken).toEqual([]);
+	});
+
+	it('wiki links point at known terms and English Wikipedia', async () => {
+		const wiki: Record<string, string> = (await import('./wiki.json')).default;
+		expect(Object.keys(wiki).filter((id) => !termIds.has(id))).toEqual([]);
+		expect(Object.values(wiki).filter((u) => !u.startsWith('https://en.wikipedia.org/wiki/'))).toEqual([]);
 	});
 
 	it('has well-formed dedicated pages', () => {

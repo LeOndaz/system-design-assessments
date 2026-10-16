@@ -1,4 +1,5 @@
 import type { Assessment, GlossaryTerm } from './types';
+import wiki from './wiki.json';
 
 /**
  * Content registry. Files are discovered automatically:
@@ -13,8 +14,12 @@ export const assessments: Assessment[] = Object.values(assessmentModules)
 	.map((m) => m.default)
 	.sort((a, b) => a.number - b.number);
 
+/** Verified Wikipedia links, id → URL. Kept separate so tooling can regenerate it. */
+const wikiLinks: Record<string, string> = wiki;
+
 export const glossary: GlossaryTerm[] = Object.values(glossaryModules)
 	.flatMap((m) => m.default)
+	.map((t) => (wikiLinks[t.id] && !t.wiki ? { ...t, wiki: wikiLinks[t.id] } : t))
 	.sort((a, b) => a.term.localeCompare(b.term, 'en', { sensitivity: 'base' }));
 
 const termById = new Map(glossary.map((t) => [t.id, t]));

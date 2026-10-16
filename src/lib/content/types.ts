@@ -35,7 +35,11 @@ export type Block =
 	/** Left-to-right pipeline / request path, e.g. ["Browser", "CDN", "API", "Postgres"]. */
 	| { type: 'flow'; steps: FlowStep[]; caption?: Rich }
 	/** Side-by-side columns of blocks (e.g. "before" / "after"). */
-	| { type: 'columns'; columns: { title?: Rich; blocks: Block[] }[] };
+	| { type: 'columns'; columns: { title?: Rich; blocks: Block[] }[] }
+	/** Interactive simulated cloud console. See `Lab`. */
+	| { type: 'lab'; lab: Lab }
+	/** A mock UI screen; in `spot` mode the reader clicks elements they think are wrong. */
+	| { type: 'mock'; mock: MockScreen };
 
 export interface RankedItem {
 	title: Rich;
@@ -268,6 +272,8 @@ export interface Assessment {
 	/** Total suggested minutes. */
 	minutes: number;
 	difficulty: 'foundation' | 'intermediate' | 'advanced';
+	/** Home-page grouping. Default 'core'. */
+	track?: 'core' | 'interactive' | 'mixed' | 'specialist';
 	topics: string[];
 	/** Optional top-of-page blocks (time plan, grading notes). */
 	overview?: Block[];
@@ -295,6 +301,8 @@ export interface GlossaryTerm {
 	page?: Block[];
 	/** Related term ids. */
 	related?: string[];
+	/** Wikipedia article (filled from content/wiki.json). */
+	wiki?: string;
 }
 
 export type GlossaryCategory =
@@ -310,4 +318,188 @@ export type GlossaryCategory =
 	| 'money & time'
 	| 'reliability practice'
 	| 'security & compliance'
-	| 'business';
+	| 'business'
+	| 'fintech'
+	| 'healthcare'
+	| 'manufacturing';
+
+// ───────────────────────── interactive labs ─────────────────────────
+
+/**
+ * A lab is a tiny deterministic simulation rendered as a cloud console.
+ * State is a flat record; `step` advances it one simulated second; metrics are pure functions of state.
+ * The reader edits resource fields / runs actions; changes land after `applySeconds` (deploy delay).
+ * Keys starting with `_` are hidden internals (e.g. `_backlog`).
+ */
+export type LabValue = number | string | boolean;
+export type LabState = Record<string, LabValue>;
+
+export interface LabCtx {
+	/** Simulated seconds since start. */
+	t: number;
+	/** Seeded random in [0, 1). */
+	rand: () => number;
+}
+
+export interface LabField {
+	/** State key this field edits. */
+	key: string;
+	label: string;
+	kind: 'number' | 'select' | 'toggle';
+	options?: string[];
+	min?: number;
+	max?: number;
+	step?: number;
+	unit?: string;
+	help?: Rich;
+}
+
+export interface LabAction {
+	id: string;
+	label: string;
+	danger?: boolean;
+	/** Shown in a confirm step before running. */
+	confirm?: string;
+	/** Returns state changes, a log line, and an optional delay before the changes land. */
+	run: (s: LabState, ctx: LabCtx) => { set?: LabState; log: string; delay?: number };
+}
+
+export interface LabResource {
+	id: string;
+	/** Left-nav group, e.g. "EC2", "RDS", "SQS", "Workloads". */
+	service: string;
+	name: string;
+	/** e.g. "Auto Scaling group", "Deployment", "DB instance". */
+	type: string;
+	/** Read-only detail rows. */
+	details?: (s: LabState) => [string, string][];
+	/** Status pill. */
+	status?: (s: LabState, m: Record<string, number>) => { label: string; tone: Tone };
+	/** Editable config, saved together with "Apply changes". */
+	fields?: LabField[];
+	/** Simulated seconds before saved field changes take effect. Default 20. */
+	applySeconds?: number;
+	actions?: LabAction[];
+}
+
+export interface LabMetric {
+	id: string;
+	label: string;
+	unit?: string;
+	get: (s: LabState, ctx: LabCtx) => number;
+	thresholds?: Threshold[];
+	/** Fixed y max for the live chart. */
+	max?: number;
+	/** Fires an alarm log line when crossed (value > alarm). */
+	alarm?: number;
+}
+
+export interface Lab {
+	title: string;
+	/** Console look. */
+	console: 'cloud' | 'kubernetes';
+	/** e.g. "us-east-1", "prod-eu cluster". */
+	scope?: string;
+	brief: Rich;
+	resources: LabResource[];
+	initial: LabState;
+	/** Advance one simulated second. Return only changed keys. */
+	step: (s: LabState, ctx: LabCtx) => LabState;
+	metrics: LabMetric[];
+	/** Scripted happenings. */
+	events?: { at: number; log: string; set?: LabState }[];
+	/** Win when `check` holds for `hold` consecutive seconds (default 30). */
+	win: { text: Rich; check: (s: LabState, m: Record<string, number>, t: number) => boolean; hold?: number };
+	/** Instant loss conditions (data loss, outage too long, budget blown). */
+	lose?: { text: Rich; check: (s: LabState, m: Record<string, number>, t: number) => boolean }[];
+	/** Dollars per hour, shown in the header and scored. */
+	cost?: (s: LabState) => number;
+	/** Simulated seconds available. Default 600. */
+	timeLimit?: number;
+	/** Simulated seconds per real second. Default 5. */
+	speed?: number;
+	/**
+	 * Reference solution, used by the validator: field changes applied at the given sim times
+	 * (honouring applySeconds) must reach the win state before timeLimit.
+	 */
+	solution: { at: number; set?: LabState; action?: { resource: string; id: string } }[];
+	/** A tempting wrong move, used by the validator: applying it must NOT win. */
+	trap?: { at: number; set?: LabState; action?: { resource: string; id: string } }[];
+}
+
+// ───────────────────────── mock UI ─────────────────────────
+
+export interface MockScreen {
+	device: 'desktop' | 'mobile';
+	/** Browser bar text or app title. */
+	url?: string;
+	title?: string;
+	/** `spot`: reader flags elements, then checks against planted issues. */
+	mode?: 'spot' | 'view';
+	elements: MockEl[];
+}
+
+export interface MockEl {
+	kind:
+		| 'nav'
+		| 'heading'
+		| 'text'
+		| 'input'
+		| 'textarea'
+		| 'select'
+		| 'checkbox'
+		| 'radio'
+		| 'button'
+		| 'link'
+		| 'toast'
+		| 'banner'
+		| 'modal'
+		| 'card'
+		| 'row'
+		| 'table'
+		| 'list'
+		| 'image'
+		| 'tabs'
+		| 'progress'
+		| 'skeleton'
+		| 'divider'
+		| 'badge'
+		| 'stepper';
+	text?: string;
+	label?: string;
+	value?: string;
+	placeholder?: string;
+	hint?: string;
+	error?: string;
+	variant?: 'primary' | 'secondary' | 'danger' | 'ghost';
+	tone?: Tone;
+	disabled?: boolean;
+	checked?: boolean;
+	required?: boolean;
+	options?: string[];
+	items?: string[];
+	head?: string[];
+	rows?: string[][];
+	/** For tabs/stepper: index of the active item. */
+	active?: number;
+	/** For progress: 0–100. */
+	percent?: number;
+	children?: MockEl[];
+	/** Visual tweaks so content can plant problems. */
+	look?: {
+		size?: 'xs' | 'sm' | 'md' | 'lg';
+		align?: 'left' | 'center' | 'right';
+		/** Low-contrast text (planted a11y issue). */
+		faint?: boolean;
+		/** Tiny tap target. */
+		tiny?: boolean;
+		/** Pushes content (layout shift) — rendered with a dashed outline in reveal. */
+		width?: 'auto' | 'full' | 'half';
+		/** Colour-only status. */
+		color?: 'red' | 'green' | 'amber' | 'grey';
+	};
+	/** A planted problem: shown as a hit/miss after checking. */
+	issue?: Rich;
+	/** Looks wrong but isn't; explained after checking. */
+	decoy?: Rich;
+}

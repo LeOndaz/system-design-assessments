@@ -70,3 +70,19 @@ const p95 = shape(60, { base: 180, noise: 0.08, seed: 1 }, step(30, 5200));
 Every series must have exactly `x.length` points (the validator checks). Typical sizes: 40–90 points. Panels sit in a 6-column grid: `span: 6` full width, `3` half, `2` third, `1` a small stat.
 
 Dashboard styles: `grafana` (dark), `cloudwatch` (light, AWS-console-like), `kibana` (light, log analytics), `datadog` (light/purple APM). Pick the style that matches the story (CloudWatch for AWS resources, Kibana for logs, Grafana for Prometheus metrics).
+
+## Interactive labs (`lab` block)
+
+A lab is a deterministic simulation rendered as a cloud or Kubernetes console (`src/lib/labs/`). See `src/lib/content/labs/flash-sale-backlog.ts` for the reference.
+
+- **State** is a flat record. Keys starting with `_` are hidden internals (backlog, timers).
+- **Resources** appear in the left nav, grouped by `service`. `fields` edit state keys and land after `applySeconds` (the rollout delay is part of the puzzle). `actions` are buttons (`danger` + `confirm` for destructive ones).
+- **`step(s, ctx)`** advances one simulated second and returns only changed keys. **Metrics** are pure functions of state.
+- **`win`** must hold for `hold` seconds; **`lose`** conditions end the run (SLA breach, data loss, budget blown).
+- **`solution`** (required) and **`trap`** (recommended) are scripted move lists. The validator replays them: the solution must win, doing nothing must not win, and the trap must not win.
+- Design rule: **the obvious move must be wrong or insufficient**, and the console must contain the evidence (a status pill, a detail row, an alarm) that points to the real constraint.
+- Put labs in `src/lib/content/labs/<name>.ts` (default export) and import them into the assessment. Explain the mechanics in the question's answer (debrief).
+
+## Mock UI (`mock` block)
+
+A mock screen built from `MockEl` specs (`src/lib/mock/MockScreen.svelte`). With `mode: 'spot'` the reader clicks elements they think are wrong, then checks against planted `issue`s (≥3, validator-enforced) and `decoy`s (look wrong, aren't; explain why). Use `look` to plant visual problems: `faint` (low contrast), `tiny` (small tap target), `color` (colour-only status). The answer should still give the full written critique, ranked by user harm.

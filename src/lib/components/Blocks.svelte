@@ -13,6 +13,8 @@
 	import Dashboard from '$lib/charts/Dashboard.svelte';
 	import LogView from '$lib/charts/LogView.svelte';
 	import TraceView from '$lib/charts/TraceView.svelte';
+	import LabConsole from '$lib/labs/LabConsole.svelte';
+	import MockScreenView from '$lib/mock/MockScreen.svelte';
 	import Self from './Blocks.svelte';
 
 	let { blocks }: { blocks: Block[] } = $props();
@@ -51,6 +53,10 @@
 		<TraceView trace={b.trace} />
 	{:else if b.type === 'flow'}
 		<Flow steps={b.steps} caption={b.caption} />
+	{:else if b.type === 'lab'}
+		<LabConsole lab={b.lab} />
+	{:else if b.type === 'mock'}
+		<MockScreenView mock={b.mock} />
 	{:else if b.type === 'columns'}
 		<div class="columns">
 			{#each b.columns as col, j (j)}

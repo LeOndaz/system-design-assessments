@@ -1,27 +1,27 @@
 import { storage } from './storage';
 
-type Theme = 'system' | 'light' | 'dark';
+type Theme = 'light' | 'dark';
 const KEY = 'drills:theme';
 
+/** Two-state theme toggle. Until the user picks, the effective theme follows the OS setting. */
 class ThemeState {
-	value = $state<Theme>('system');
+	value = $state<Theme>('light');
 
 	load() {
-		const v = storage.get(KEY);
-		if (v === 'light' || v === 'dark') this.value = v;
-		this.apply();
+		const saved = storage.get(KEY);
+		const system: Theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+		this.value = saved === 'light' || saved === 'dark' ? saved : system;
+		if (saved === 'light' || saved === 'dark') this.apply();
 	}
 
-	cycle() {
-		this.value = this.value === 'system' ? 'dark' : this.value === 'dark' ? 'light' : 'system';
+	toggle() {
+		this.value = this.value === 'dark' ? 'light' : 'dark';
 		storage.set(KEY, this.value);
 		this.apply();
 	}
 
 	private apply() {
-		const root = document.documentElement;
-		if (this.value === 'system') root.removeAttribute('data-theme');
-		else root.setAttribute('data-theme', this.value);
+		document.documentElement.setAttribute('data-theme', this.value);
 	}
 }
 

@@ -101,7 +101,10 @@
 		<span class="head"><span class="name">{term.term}</span><span class="cat">{term.category}</span></span>
 		<span class="short"><Rich text={term.short} plainTerms /></span>
 		{#if term.analogy}<span class="analogy"><span class="lbl">Think of it as</span> <Rich text={term.analogy} plainTerms /></span>{/if}
-		<a class="more" href={termHref(term.id)}>{term.page ? 'Full explainer with examples →' : 'Open in glossary →'}</a>
+		<span class="links">
+			<a class="more" href={termHref(term.id)}>{term.page ? 'Full explainer with examples →' : 'Open in glossary →'}</a>
+			{#if term.wiki}<a class="more wiki" href={term.wiki} target="_blank" rel="noreferrer">Wikipedia ↗</a>{/if}
+		</span>
 	</span>{/if}
 
 <style>
@@ -183,6 +186,15 @@
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
 		color: var(--accent);
+	}
+	.links {
+		display: flex;
+		justify-content: space-between;
+		gap: 10px;
+		flex-wrap: wrap;
+	}
+	.wiki {
+		color: var(--muted);
 	}
 	.more {
 		font-family: var(--f-mono);

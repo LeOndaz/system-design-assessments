@@ -17,7 +17,7 @@
 	});
 
 	const isActive = (prefix: string) => page.url.pathname.startsWith(href(prefix));
-	const themeIcon = $derived(theme.value === 'dark' ? '☾' : theme.value === 'light' ? '☀' : '◐');
+	const themeIcon = $derived(theme.value === 'dark' ? '☀' : '☾');
 </script>
 
 <a class="skip" href="#main">Skip to content</a>
@@ -46,7 +46,7 @@
 				<span aria-hidden="true">⌕</span><span class="lbl">Search</span><kbd>⌘K</kbd>
 			</button>
 			<Timer />
-			<button type="button" class="icon" onclick={() => theme.cycle()} title="Theme: {theme.value}" aria-label="Toggle theme ({theme.value})"
+			<button type="button" class="icon" onclick={() => theme.toggle()} title="Switch to {theme.value === 'dark' ? 'light' : 'dark'} mode" aria-label="Switch to {theme.value === 'dark' ? 'light' : 'dark'} mode"
 				>{themeIcon}</button
 			>
 		</div>

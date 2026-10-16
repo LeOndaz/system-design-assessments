@@ -11,9 +11,19 @@
 		const blocks = a.parts.flatMap((p) => p.questions.flatMap((q) => [...q.prompt, ...q.answer]));
 		return {
 			charts: blocks.filter((b) => b.type === 'dashboard' || b.type === 'trace' || b.type === 'logs').length,
-			tickets: blocks.filter((b) => b.type === 'ticket').length
+			tickets: blocks.filter((b) => b.type === 'ticket').length,
+			labs: blocks.filter((b) => b.type === 'lab').length,
+			mocks: blocks.filter((b) => b.type === 'mock').length
 		};
 	};
+	const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+	const tracks = [
+		{ id: 'core', title: 'Core assessments', blurb: 'Focused sets, each built around one kind of pressure.' },
+		{ id: 'interactive', title: 'Interactive labs', blurb: 'Work the incident in a simulated console: live metrics, rollout delays, traps.' },
+		{ id: 'mixed', title: 'Mixed', blurb: 'Everything interleaved, the way a real week arrives. No warning about what comes next.' },
+		{ id: 'specialist', title: 'Specialist', blurb: 'Outside the mixes: UX, accessibility and product judgement.' }
+	] as const;
+	const byTrack = (id: string) => assessments.filter((a) => (a.track ?? 'core') === id);
 	const featured = ['multi-tenancy', 'query-plan-flip', 'littles-law', 'idempotency', 'cache-stampede', 'saga'].filter((id) =>
 		glossary.some((t) => t.id === id)
 	);
@@ -41,8 +51,11 @@
 		</dl>
 	</section>
 
-	<section class="list" aria-label="Assessments">
-		{#each assessments as a (a.id)}
+	{#each tracks as tr (tr.id)}
+	{#if byTrack(tr.id).length}
+	<div class="track-head"><h2>{tr.title}</h2><p>{tr.blurb}</p></div>
+	<section class="list" aria-label={tr.title}>
+		{#each byTrack(tr.id) as a (a.id)}
 			{@const qids = ids(a)}
 			{@const done = progress.count(a.id, qids)}
 			{@const k = kinds(a)}
@@ -58,8 +71,10 @@
 						<span>{a.minutes} min</span>
 						<span>{a.parts.filter((p) => p.questions.length).length} parts</span>
 						<span>{qids.length} questions</span>
-						{#if k.charts}<span>{k.charts} {k.charts === 1 ? 'chart' : 'charts'}, logs & traces</span>{/if}
-						{#if k.tickets}<span>{k.tickets} human {k.tickets === 1 ? 'report' : 'reports'}</span>{/if}
+						{#if k.labs}<span class="hot">{plural(k.labs, 'live lab')}</span>{/if}
+						{#if k.mocks}<span class="hot">{plural(k.mocks, 'UI mock')}</span>{/if}
+						{#if k.charts}<span>{plural(k.charts, 'chart/log/trace', 'charts, logs & traces')}</span>{/if}
+						{#if k.tickets}<span>{plural(k.tickets, 'human report')}</span>{/if}
 					</div>
 					<div class="topics">{#each a.topics as t (t)}<span>{t}</span>{/each}</div>
 					<div class="progress" aria-label="{done} of {qids.length} done">
@@ -70,6 +85,8 @@
 			</a>
 		{/each}
 	</section>
+	{/if}
+	{/each}
 
 	<section class="how">
 		<h2>How to use it</h2>
@@ -129,6 +146,22 @@
 		font-weight: 800;
 		font-size: 2rem;
 		line-height: 1;
+	}
+	.track-head {
+		display: grid;
+		gap: 2px;
+		margin-top: 26px;
+	}
+	.track-head h2 {
+		font-size: 1.35rem;
+	}
+	.track-head p {
+		color: var(--muted);
+		font-size: 15px;
+	}
+	.hot {
+		color: var(--accent);
+		font-weight: 500;
 	}
 	.list {
 		display: grid;
